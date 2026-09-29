@@ -14,7 +14,7 @@ export function CtaBanner() {
         {/* Feature Pill */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/40 bg-gradient-to-r from-primary/15 via-violet-500/15 to-cyan-500/15 backdrop-blur-md shadow-[0_0_20px_rgba(99,102,241,0.25)] text-foreground text-xs font-mono font-medium">
           <Zap className="w-3.5 h-3.5 text-primary fill-current" />
-          <span>Local Autonomy Engine</span>
+          <span>Autonomous Intelligence Engine</span>
         </div>
 
         {/* Headline */}
@@ -22,7 +22,7 @@ export function CtaBanner() {
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
             Start building production apps with{" "}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-violet-400 bg-clip-text text-transparent">
-              local AI today
+              autonomous AI today
             </span>
             .
           </h2>
@@ -55,7 +55,7 @@ export function CtaBanner() {
         <div className="pt-6 border-t border-border/60 flex flex-wrap items-center justify-center gap-6 text-xs text-muted-foreground font-mono">
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            <span>100% On-Premise Privacy</span>
+            <span>100% Code Privacy</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Terminal className="w-3.5 h-3.5 text-cyan-400" />

@@ -55,7 +55,7 @@ export function VariantSplitStudio() {
           </Link>
           <div className="flex items-center gap-2 text-xs font-mono px-3 py-1 rounded-full border border-border/70 bg-card/60 backdrop-blur-md">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-muted-foreground">Local Wasm Isolated</span>
+            <span className="text-muted-foreground">Private Sandbox Isolated</span>
           </div>
         </div>
 
@@ -69,7 +69,7 @@ export function VariantSplitStudio() {
               Build fullstack web apps in a private, isolated sandbox.
             </h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Every workspace boots an isolated WebContainer microVM on your local machine. No code leaves your hardware.
+              Every workspace boots an isolated WebContainer microVM in a private sandbox. Zero external code exposure.
             </p>
           </div>
 
@@ -143,7 +143,7 @@ export function VariantSplitStudio() {
             <p className="text-xs text-muted-foreground">
               {mode === "signin"
                 ? "Enter your credentials to access your autonomous workspaces."
-                : "Get started with fullstack local AI development today."}
+                : "Get started with fullstack autonomous AI development today."}
             </p>
           </div>
 

@@ -203,7 +203,7 @@ export function LiveDemo() {
                 </div>
                 <div className="pt-2 text-muted-foreground text-[10px] flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Validated by local Ollama ReAct safety engine</span>
+                  <span>Validated by Autonomous ReAct Safety Engine</span>
                 </div>
               </div>
             )}

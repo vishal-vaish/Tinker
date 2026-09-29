@@ -100,10 +100,10 @@ export function VariantBlueprint() {
 
                 <div className="p-3 rounded-lg bg-black/40 border border-cyan-900/40 space-y-1">
                   <div className="text-muted-foreground flex items-center justify-between">
-                    <span>LOCAL INFERENCE</span>
+                    <span>NEURAL ENGINE</span>
                     <span className="text-violet-400">READY</span>
                   </div>
-                  <div className="text-white font-bold">Ollama Gemma 4 / Qwen</div>
+                  <div className="text-white font-bold">Autonomous Agent Engine v1.0</div>
                 </div>
               </div>
             </div>

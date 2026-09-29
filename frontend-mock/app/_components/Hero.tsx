@@ -1,47 +1,159 @@
 "use client";
 
+import { useRef, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Zap, ArrowRight, Play, Terminal, Cpu, Database, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { PLATFORM_METRICS } from "@/lib/mock-data";
+import { ArrowRight, Play, Cpu, Terminal, Database, CheckCircle2, Zap } from "lucide-react";
+import { ShinyText } from "@/components/global/ShinyText";
+import { PLATFORM_METRICS, HERO_CONFIG } from "@/lib/mock-data";
+
+interface AnimatedMetricValueProps {
+  value: string;
+  duration?: number;
+  delay?: number;
+  restartKey?: number;
+  className?: string;
+}
+
+function AnimatedMetricValue({
+  value,
+  duration = 1800,
+  delay = 350,
+  restartKey = 0,
+  className = "",
+}: AnimatedMetricValueProps) {
+  const ref = useRef<HTMLSpanElement>(null);
+  
+  const parsed = useMemo(() => {
+    const match = value.match(/^([^0-9.]*)([0-9]+(?:\.[0-9]+)?)(.*)$/);
+    if (!match) return null;
+    return {
+      prefix: match[1],
+      target: parseFloat(match[2]),
+      decimals: match[2].includes(".") ? match[2].split(".")[1].length : 0,
+      suffix: match[3],
+    };
+  }, [value]);
+
+  const [displayNum, setDisplayNum] = useState<number>(0);
+
+  useEffect(() => {
+    if (!parsed) return;
+
+    const targetVal = parsed.target;
+
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayNum(targetVal);
+      return;
+    }
+
+    setDisplayNum(0);
+
+    const actualDelay = restartKey > 0 ? 0 : delay;
+    let intervalId: NodeJS.Timeout;
+
+    const timerId = setTimeout(() => {
+      const startTime = performance.now();
+
+      intervalId = setInterval(() => {
+        const now = performance.now();
+        const progress = Math.min((now - startTime) / duration, 1);
+        // easeOutCubic
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        const current = easedProgress * targetVal;
+        setDisplayNum(current);
+
+        if (progress >= 1) {
+          clearInterval(intervalId);
+          setDisplayNum(targetVal);
+        }
+      }, 20);
+    }, actualDelay);
+
+    return () => {
+      clearTimeout(timerId);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [parsed, duration, delay, restartKey]);
+
+  if (!parsed) {
+    return <span className={`font-bold tracking-tight tabular-nums font-mono ${className}`}>{value}</span>;
+  }
+
+  const formattedNum = parsed.decimals > 0 ? displayNum.toFixed(parsed.decimals) : Math.round(displayNum).toString();
+
+  return (
+    <span
+      ref={ref}
+      className={`font-bold tracking-tight tabular-nums font-mono min-w-[2.2rem] inline-block text-left ${className}`}
+    >
+      {parsed.prefix}{formattedNum}{parsed.suffix}
+    </span>
+  );
+}
+
+const METRIC_BADGE_THEMES = {
+  violet: {
+    container: "border-white/15 bg-black/50 backdrop-blur-xl hover:border-violet-400/40 hover:bg-black/70 shadow-md",
+    iconColor: "text-violet-400",
+    valueText: "text-white font-bold",
+    dot: "text-white/30",
+    labelText: "text-white/80",
+  },
+  cyan: {
+    container: "border-white/15 bg-black/50 backdrop-blur-xl hover:border-cyan-400/40 hover:bg-black/70 shadow-md",
+    iconColor: "text-cyan-400",
+    valueText: "text-white font-bold",
+    dot: "text-white/30",
+    labelText: "text-white/80",
+  },
+  emerald: {
+    container: "border-white/15 bg-black/50 backdrop-blur-xl hover:border-emerald-400/40 hover:bg-black/70 shadow-md",
+    iconColor: "text-emerald-400",
+    valueText: "text-white font-bold",
+    dot: "text-white/30",
+    labelText: "text-white/80",
+  },
+  amber: {
+    container: "border-white/15 bg-black/50 backdrop-blur-xl hover:border-amber-400/40 hover:bg-black/70 shadow-md",
+    iconColor: "text-amber-400",
+    valueText: "text-white font-bold",
+    dot: "text-white/30",
+    labelText: "text-white/80",
+  },
+};
+
+function MetricPill({
+  metric,
+  icon,
+}: {
+  metric: (typeof PLATFORM_METRICS)[0];
+  icon: React.ReactNode;
+}) {
+  const [hoverKey, setHoverKey] = useState(0);
+  const theme = METRIC_BADGE_THEMES[metric.accent] || METRIC_BADGE_THEMES.violet;
+
+  return (
+    <div
+      onMouseEnter={() => setHoverKey((k) => k + 1)}
+      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-mono transition-all duration-200 cursor-default select-none group ${theme.container}`}
+    >
+      <span className={`shrink-0 flex items-center justify-center transition-colors ${theme.iconColor}`}>
+        {icon}
+      </span>
+      <AnimatedMetricValue
+        value={metric.value}
+        restartKey={hoverKey}
+        className={theme.valueText}
+      />
+      <span className={theme.dot}>•</span>
+      <span className={`text-[11px] font-medium ${theme.labelText}`}>
+        {metric.shortLabel || metric.label}
+      </span>
+    </div>
+  );
+}
 
 export function Hero() {
-
-  const getMetricAccent = (accent: string) => {
-    switch (accent) {
-      case "violet":
-        return {
-          border: "hover:border-violet-500/50",
-          glow: "group-hover:bg-violet-500/10",
-          iconBg: "bg-violet-500/10 text-violet-400 border-violet-500/20",
-          valColor: "text-violet-300",
-        };
-      case "cyan":
-        return {
-          border: "hover:border-cyan-500/50",
-          glow: "group-hover:bg-cyan-500/10",
-          iconBg: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-          valColor: "text-cyan-300",
-        };
-      case "emerald":
-        return {
-          border: "hover:border-emerald-500/50",
-          glow: "group-hover:bg-emerald-500/10",
-          iconBg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-          valColor: "text-emerald-300",
-        };
-      case "amber":
-      default:
-        return {
-          border: "hover:border-amber-500/50",
-          glow: "group-hover:bg-amber-500/10",
-          iconBg: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-          valColor: "text-amber-300",
-        };
-    }
-  };
-
   const metricIcons = {
     "< 180ms": <Cpu className="w-3.5 h-3.5" />,
     "140ms": <Terminal className="w-3.5 h-3.5" />,
@@ -49,90 +161,98 @@ export function Hero() {
     "99.2%": <CheckCircle2 className="w-3.5 h-3.5" />,
   };
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(() => {
+        // Autoplay policy fallback
+      });
+    }
+  }, []);
+
   return (
-    <section className="relative pt-24 pb-20 px-6 overflow-hidden text-center">
-      {/* Background Multi-Layer Ambient Glow & Grid Pattern */}
-      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
-        {/* Subtle engineering grid */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff06_1px,transparent_1px),linear-gradient(to_bottom,#ffffff06_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_40%,#000_70%,transparent_100%)]" />
-        
-        {/* Upper Center Primary Radial */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-primary/20 via-violet-600/15 to-cyan-500/15 blur-[140px] rounded-full" />
-        
-        {/* Secondary Warm / Emerald Accent Flares */}
-        <div className="absolute top-1/3 left-1/4 w-[350px] h-[250px] bg-cyan-500/10 blur-[100px] rounded-full" />
-        <div className="absolute top-1/3 right-1/4 w-[350px] h-[250px] bg-violet-500/10 blur-[100px] rounded-full" />
-      </div>
+    <section className="relative w-full min-h-[100dvh] h-screen bg-[#000000] text-white overflow-hidden flex flex-col justify-between pt-24 pb-8 sm:pb-12 select-none">
+      {/* Full-screen Looping Video Background loaded from local public directory */}
+      <video
+        ref={videoRef}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
+      >
+        <source src={HERO_CONFIG.videoUrl} type="video/mp4" />
+      </video>
 
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Release Pill with Live Beacon */}
-        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-primary/40 bg-gradient-to-r from-primary/15 via-violet-500/10 to-cyan-500/15 backdrop-blur-md text-xs font-mono font-medium shadow-[0_0_20px_rgba(99,102,241,0.25)] hover:border-primary/60 transition">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] inline-block" />
-          <span className="text-foreground font-semibold">Tinker 1.0 General Availability</span>
-          <span className="text-muted-foreground/60">•</span>
-          <span className="text-primary hover:text-primary-foreground transition flex items-center gap-1">
-            Local Autonomous Engine <ArrowRight className="w-3 h-3 inline" />
-          </span>
+      {/* Dark Contrast Backdrop Overlay */}
+      <div className="absolute inset-0 bg-black/45 pointer-events-none z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-transparent to-black pointer-events-none z-[1]" />
+
+      {/* Main Hero Container */}
+      <div className="relative z-10 max-w-7xl mx-auto px-6 w-full flex flex-col justify-between h-full">
+        {/* Center Content Section */}
+        <div className="my-auto py-4 sm:py-6 text-center max-w-4xl mx-auto space-y-6 sm:space-y-8">
+          {/* Release Pill with Live Beacon (Original Content) */}
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-primary/40 bg-gradient-to-r from-primary/15 via-violet-500/10 to-cyan-500/15 backdrop-blur-md text-xs font-mono font-medium shadow-[0_0_20px_rgba(99,102,241,0.25)] hover:border-primary/60 transition">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] inline-block" />
+            <span className="text-white font-semibold">{HERO_CONFIG.badgeRelease}</span>
+            <span className="text-white/40">•</span>
+            <span className="text-cyan-300 hover:text-white transition flex items-center gap-1">
+              {HERO_CONFIG.badgeEngine} <ArrowRight className="w-3 h-3 inline" />
+            </span>
+          </div>
+
+          {/* Main Headline with Animated Shiny Gradient (Original Content) */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tighter leading-[0.9] font-sans font-medium text-white">
+            <span className="block">{HERO_CONFIG.headingLine1}</span>
+            <ShinyText
+              className="block font-bold"
+              baseColor="#64CEFB"
+              shineColor="#ffffff"
+              speed={3}
+            >
+              {HERO_CONFIG.headingLine2}
+            </ShinyText>
+          </h1>
+
+          {/* Subtitle (Original Content) */}
+          <p className="text-sm sm:text-base md:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed font-sans">
+            The autonomous AI software engineer powered by{" "}
+            <span className="text-white font-medium">private neural execution</span>, sub-second
+            in-browser <span className="text-white font-medium">WebContainers</span>, dedicated{" "}
+            <span className="text-white font-medium">PostgreSQL sandboxes</span>, and{" "}
+            <span className="text-white font-medium">Agentation</span> visual element feedback.
+          </p>
+
+          {/* Action CTAs: Black background, hover gray-900, rounded-full, animated arrow */}
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+            <Link href="/login" className="group">
+              <button className="px-6 md:px-8 py-3.5 md:py-4 rounded-full bg-black hover:bg-zinc-900 text-white border border-gray-700 shadow-2xl transition-all duration-200 inline-flex items-center gap-3 font-semibold text-sm md:text-base cursor-pointer">
+                <span>{HERO_CONFIG.ctaPrimaryText}</span>
+                <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1.5 transition-transform duration-200" />
+              </button>
+            </Link>
+
+            <a href="#how-it-works" className="group">
+              <button className="px-5 md:px-7 py-3.5 md:py-4 rounded-full bg-white/10 hover:bg-white/15 text-white border border-white/15 backdrop-blur-md transition-all duration-200 inline-flex items-center gap-2.5 font-medium text-sm md:text-base cursor-pointer">
+                <Play className="w-3.5 h-3.5 fill-current text-white/90" />
+                <span>{HERO_CONFIG.ctaSecondaryText}</span>
+              </button>
+            </a>
+          </div>
         </div>
 
-        {/* Main Headline with Colorful Shimmer */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-foreground leading-[1.08]">
-          Build and run fullstack web apps at the{" "}
-          <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-violet-400 bg-clip-text text-transparent">
-            speed of thought
-          </span>
-          .
-        </h1>
-
-        {/* Subtitle */}
-        <p className="text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          The autonomous AI software engineer powered by <span className="text-foreground font-medium">local Ollama inference</span>, sub-second in-browser <span className="text-foreground font-medium">WebContainers</span>, dedicated <span className="text-foreground font-medium">PostgreSQL sandboxes</span>, and <span className="text-foreground font-medium">Agentation</span> visual element feedback.
-        </p>
-
-        {/* Action CTAs */}
-        <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
-          <Link href="/login">
-            <Button size="lg" className="gap-2 shadow-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-6 h-11">
-              <span>Start Building Free</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-
-          <a href="#how-it-works">
-            <Button variant="ghost" size="lg" className="gap-2 h-11 text-xs">
-              <Play className="w-3.5 h-3.5 fill-current text-primary" />
-              <span>See How It Works</span>
-            </Button>
-          </a>
-        </div>
-
-        {/* Platform Metrics Bento Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 pt-10 max-w-4xl mx-auto">
-          {PLATFORM_METRICS.map((metric) => {
-            const styles = getMetricAccent(metric.accent);
-            return (
-              <div
-                key={metric.label}
-                className={`relative p-4 rounded-xl border border-border bg-card/60 backdrop-blur-md space-y-2 text-left transition-all duration-200 group ${styles.border}`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-muted-foreground font-medium leading-none">
-                    {metric.label}
-                  </span>
-                  <div className={`p-1.5 rounded-md border ${styles.iconBg}`}>
-                    {metricIcons[metric.value as keyof typeof metricIcons] || <Zap className="w-3 h-3" />}
-                  </div>
-                </div>
-                <div className={`text-2xl font-extrabold font-mono tracking-tight ${styles.valColor}`}>
-                  {metric.value}
-                </div>
-                <div className="text-[10px] text-muted-foreground/80 font-mono flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-                  <span>{metric.change}</span>
-                </div>
-              </div>
-            );
-          })}
+        {/* Bottom Section: Compact Platform Metric Tags */}
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 max-w-4xl mx-auto w-full pt-2 pb-1">
+          {PLATFORM_METRICS.map((metric) => (
+            <MetricPill
+              key={metric.label}
+              metric={metric}
+              icon={metricIcons[metric.value as keyof typeof metricIcons] || <Zap className="w-3.5 h-3.5" />}
+            />
+          ))}
         </div>
       </div>
     </section>

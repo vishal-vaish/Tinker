@@ -210,7 +210,7 @@ export function VariantAuroraGlass() {
 
       {/* Footer */}
       <footer className="h-14 px-6 text-center text-[11px] text-muted-foreground flex items-center justify-center border-t border-border/40 backdrop-blur-md">
-        <span>Protected by on-device PathJail isolation · Zero telemetry</span>
+        <span>Protected by PathJail container isolation · Zero telemetry · 100% Code Privacy</span>
       </footer>
     </div>
   );

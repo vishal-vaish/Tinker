@@ -18,7 +18,7 @@ export function Faq() {
           Frequently Asked Questions
         </h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Everything you need to know about Tinker&apos;s local execution engine, WebContainer sandboxing, and Agentation integration.
+          Everything you need to know about Tinker&apos;s autonomous execution engine, WebContainer sandboxing, and Agentation integration.
         </p>
       </div>
 

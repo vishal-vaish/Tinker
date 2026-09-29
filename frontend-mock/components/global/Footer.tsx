@@ -14,7 +14,7 @@ export function Footer() {
               <span className="tracking-tight text-sm font-bold">TINKER</span>
             </div>
             <p className="text-xs text-muted-foreground max-w-sm leading-relaxed">
-              Autonomous fullstack agentic coding platform with in-browser WebContainers, on-device Ollama inference, and isolated PostgreSQL sandboxes.
+              Autonomous fullstack agentic coding platform with in-browser WebContainers, private neural execution, and isolated PostgreSQL sandboxes.
             </p>
             <div className="flex items-center gap-2 text-[11px] font-mono">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

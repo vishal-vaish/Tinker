@@ -67,7 +67,7 @@ export function Features() {
           <span>Core Architecture Pillars</span>
         </div>
         <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-foreground">
-          Engineered for Full Local Autonomy
+          Engineered for Enterprise Autonomy
         </h2>
         <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
           Tinker eliminates cloud latency, vendor lock-in, and unpredictable telemetry with a modular runtime built for high-performance software engineering.

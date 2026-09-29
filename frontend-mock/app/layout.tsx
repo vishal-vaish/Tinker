@@ -16,7 +16,7 @@ import { AgentationProvider } from "@/components/global/AgentationProvider";
 
 export const metadata: Metadata = {
   title: "Tinker — Autonomous Agentic Coding Platform",
-  description: "Build and run fullstack web applications at the speed of thought with local AI.",
+  description: "Build and run fullstack web applications at the speed of thought with autonomous AI.",
 };
 
 export default function RootLayout({
