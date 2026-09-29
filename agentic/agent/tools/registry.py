@@ -1,3 +1,12 @@
+"""
+agent.tools.registry — Tool Registry & Schema Validator
+
+WHAT THIS FILE DOES:
+- Holds ToolDef definitions for all tools accessible to the agent.
+- Converts registered tools to Ollama function calling schemas.
+- Validates model arguments against JSON schema (required fields, types) prior to execution.
+- Dispatches tool calls to handlers and standardizes error responses.
+"""
 import json
 from dataclasses import dataclass
 from typing import Callable, Any

@@ -1,13 +1,16 @@
 """
-The agent loop — Observe → Diagnose → Decide → Act → Reflect → Continue/Retry/Stop
+agent.loop — Core Autonomous Agent Loop
 
-Full-featured loop combining all 7 phases:
-- Safety: Path jail, command allowlist, permission gate
-- Tools: Read, write (edit/create), exec (command/tests), finish
-- Context: Token budget management, step summarization
-- Planning: Scratchpad plan.md updated each step
-- Accuracy: Retries with error feedback, no-progress detection, final verification
-- Tracing: Incremental events.jsonl + run.json + artifacts
+WHAT THIS FILE DOES:
+- Drives the Observe → Diagnose → Decide → Act → Reflect execution cycle.
+- Pre-takes a clean project snapshot for backup and diffing.
+- Runs baseline tests prior to modifications to capture initial failures.
+- Assembles prompt context within budget using ContextManager and PlanManager.
+- Calls OllamaClient, routes tool calls through the PermissionGate, and executes tools.
+- Detects no-progress loops (identical tool calls or stagnant file state).
+- Switches to fallback model on repeated failures.
+- Executes independent verification (clean test re-run) before declaring success.
+- Generates unified diffs and records final reports and traces.
 """
 import os
 import sys

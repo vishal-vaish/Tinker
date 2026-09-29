@@ -1,7 +1,11 @@
 """
-Phase 1 Acceptance Test Script
-Applies the documented fix for each sample project, runs unittest,
-verifies it passes, then reverts to the buggy version.
+eval.test_phase1_acceptance — Benchmark Ground Truth & Fix Verifier
+
+WHAT THIS FILE DOES:
+- Iterates through all 5 sample projects (off_by_one, missing_function, wrong_import, small_feature, cross_file_bug).
+- Confirms that the baseline test suite fails for each project out-of-the-box.
+- Applies verified hand-written reference patches to each project to ensure tests cleanly pass.
+- Automatically reverts all code modifications back to the broken state for future agent benchmark runs.
 """
 import subprocess
 import os

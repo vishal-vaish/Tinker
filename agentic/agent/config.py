@@ -1,3 +1,14 @@
+"""
+agent.config — Typed Configuration Loader
+
+WHAT THIS FILE DOES:
+- Reads and parses config.toml using Python's standard tomllib.
+- Validates and exposes strongly-typed configuration settings.
+- Provides ModelRoleConfig for model roles ('main' and 'fallback').
+- Exposes budget properties (max_steps, max_time_seconds, retry limits).
+- Exposes sandbox properties (allowed_commands, timeouts, caps).
+- Exposes accuracy levers (best_of_n, final_verification, no_progress).
+"""
 from dataclasses import dataclass
 import tomllib
 from pathlib import Path

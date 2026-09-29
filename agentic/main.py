@@ -1,14 +1,17 @@
 """
 Mini Coding Agent — CLI Entry Point
 
+WHAT THIS FILE DOES:
+- Serves as the primary user-facing command-line interface.
+- Parses command line arguments (--project, --task, --config).
+- Sets up core components (Config, Ollama client, AgentLoop, EventEmitter).
+- Subscribes thin event listeners to render colored progress to the terminal.
+- Captures Ctrl+C for clean cancellations.
+- Contains NO core agent logic (follows the event contract strictly).
+
 Usage:
     python main.py --project <path> --task "your task description"
     python main.py --project ./eval/tasks/off_by_one --task "Explain what this project does"
-
-Options:
-    --project   Path to the project directory (required)
-    --task      Task description (required)
-    --config    Path to config.toml (default: config.toml in same dir as main.py)
 """
 import argparse
 import os

@@ -1,3 +1,10 @@
+"""
+agent.tools.exec_tools — Command Execution & Test Running Tools
+
+WHAT THIS FILE DOES:
+- run_command: Executes allowlisted shell commands with timeouts and strict output byte limits.
+- run_tests: Executes the configured unittest command, parses output, and extracts only failing test names and key traceback lines. Never returns noisy full logs to the LLM.
+"""
 import os
 import subprocess
 import sys

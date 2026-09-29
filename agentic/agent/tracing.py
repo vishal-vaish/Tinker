@@ -1,3 +1,12 @@
+"""
+agent.tracing — Run Isolation & Trace Recorder
+
+WHAT THIS FILE DOES:
+- Establishes isolated run directories (runs/<run_id>/).
+- Appends events to events.jsonl incrementally with immediate flushes (crash-resilient).
+- Writes final run.json summaries and artifacts (diffs, test outputs).
+- Ensures runs never overwrite or pollute each other.
+"""
 import json
 import os
 import time

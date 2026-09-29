@@ -1,3 +1,12 @@
+"""
+agent.plan — Scratchpad Plan Manager
+
+WHAT THIS FILE DOES:
+- Manages reading and writing the scratchpad plan file (runs/<run_id>/plan.md).
+- Allows the agent to persist its high-level strategy across context window trimming.
+- Re-reads plan.md on every step to inject into the model's system context.
+- Appends step-by-step notes as files are modified.
+"""
 import os
 
 

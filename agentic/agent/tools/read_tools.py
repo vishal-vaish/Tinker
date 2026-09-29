@@ -1,3 +1,12 @@
+"""
+agent.tools.read_tools — Safe Read-Only Inspection Tools
+
+WHAT THIS FILE DOES:
+- list_files: Lists files and subdirectories with sizes and item caps.
+- read_file: Reads file content with optional start_line/end_line ranges and size truncation.
+- search_text: Grep-like regex/plain search across project files, ignoring caches and binary files.
+- finish: Control tool used by the agent to declare goal completion with a summary.
+"""
 import os
 import re
 from agent.tools.registry import ToolDef, ToolRegistry

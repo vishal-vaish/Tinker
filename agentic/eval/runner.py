@@ -1,4 +1,12 @@
-"""Eval runner — runs the agent on all sample tasks and records results.
+"""
+eval.runner — Automated Evaluation Benchmark Runner
+
+WHAT THIS FILE DOES:
+- Discovers all sample tasks under eval/tasks/.
+- Runs the agent sequentially on each task with configurable options (thinking, best-of-n, fallback).
+- Records all results (pass/fail, steps, tokens, duration, stop reason) to SQLite (data/agent.db).
+- Supports best-of-N attempts (runs up to N tries, keeping the first passing result).
+- Displays formatted terminal comparison tables and past evaluation history (--history).
 
 Usage:
     python -m eval.runner                              # Run with defaults
@@ -6,6 +14,7 @@ Usage:
     python -m eval.runner --thinking                   # Enable thinking mode
     python -m eval.runner --best-of-n 3                # Best of 3 attempts
     python -m eval.runner --no-fallback                # Disable fallback model
+    python -m eval.runner --history                    # Display previous benchmark runs
 """
 import argparse
 import json

@@ -1,3 +1,11 @@
+"""
+agent.safety.allowlist — Shell Command Allowlist & Injection Prevention
+
+WHAT THIS FILE DOES:
+- Enforces an allowlist of permissible command prefixes (e.g. 'python -m unittest', 'git status').
+- Detects and rejects shell chaining operators (&&, ||, ;, |) to prevent arbitrary code execution.
+- Ensures no unapproved system or network commands can be executed by the agent.
+"""
 import shlex
 import re
 

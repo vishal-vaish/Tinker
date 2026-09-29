@@ -1,4 +1,11 @@
-"""Final report builder for agent runs."""
+"""
+agent.report — Final Run Report & Metric Builder
+
+WHAT THIS FILE DOES:
+- Compiles run execution statistics (steps used, tokens in/out, execution time, stop reason, status).
+- Generates structured run summary dictionaries saved to run.json.
+- Formats clean human-readable summaries printed to the terminal at the end of every run.
+"""
 import json
 import os
 from datetime import datetime

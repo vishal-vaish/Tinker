@@ -1,3 +1,13 @@
+"""
+agent.safety.permissions — Risk-Based Permission Gate & Approval System
+
+WHAT THIS FILE DOES:
+- Categorizes all tool calls into risk levels (read, write, execute, destructive, control).
+- Auto-approves safe actions (reading within jail, allowlisted commands).
+- Intercepts edits to test files (treating them as destructive) to preserve verification integrity.
+- Routes approval requests through the EventEmitter with timeout-to-deny logic.
+- Tracks all modified files during the run.
+"""
 import time
 import threading
 from agent.safety.jail import PathJail, SecurityError

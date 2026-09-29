@@ -1,6 +1,12 @@
 """
-Unit tests for all core modules (runs without Ollama).
-Tests: config, safety (jail, allowlist, permissions), tools, context, plan, tracing, report.
+eval.test_core_modules — Unit Test Suite for All Core Non-LLM Modules
+
+WHAT THIS FILE DOES:
+- Provides 17 fast, deterministic unit tests that run completely offline without requiring Ollama.
+- Tests config loading, path jail enforcement, command allowlist rules, and risk permissions.
+- Tests tool execution (read_file, edit_file uniqueness, create_file overwrite prevention).
+- Tests context token estimation, window truncation, and step summarization.
+- Tests scratchpad plan management, run trace initialization, and report formatting.
 """
 import unittest
 import os

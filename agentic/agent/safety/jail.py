@@ -1,3 +1,12 @@
+"""
+agent.safety.jail — Path Jail & Symlink Resolution
+
+WHAT THIS FILE DOES:
+- Resolves all file paths to absolute, canonical representations (resolving '..' and symlinks).
+- Ensures that file read/write operations cannot escape the configured project root directory.
+- Raises SecurityError if any path traversal or out-of-bounds access is attempted.
+- Detects test files to enforce read-only test protection.
+"""
 import os
 
 class SecurityError(Exception):

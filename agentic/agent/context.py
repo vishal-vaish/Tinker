@@ -1,10 +1,13 @@
-"""Context management — keeps the agent within its context budget.
+"""
+agent.context — Context Window Budget Manager & Step Summarizer
 
-Local models degrade on long contexts, so this is a first-class module.
-Strategy:
-- Always keep: system prompt, task, current plan, last N steps in full
-- Older steps: compressed to one-line summaries
-- Token estimation: rough heuristic (no tokenizer dependency)
+WHAT THIS FILE DOES:
+- Manages the LLM context window to prevent exceeding model token limits (e.g. 8k tokens).
+- Provides token estimation heuristics without needing external tokenizer packages.
+- Always preserves: system prompt, task description, current scratchpad plan.
+- Keeps the most recent N steps in full detail so the model has immediate context.
+- Compresses older steps into concise one-line summaries (action + outcome).
+- Emits context token usage reports for trace logging.
 """
 
 

@@ -1,3 +1,12 @@
+"""
+agent.events — Decoupled Pub/Sub Event System
+
+WHAT THIS FILE DOES:
+- Serves as the sole interface and contract between the agent core and external channels (CLI, web UI, etc.).
+- Defines standard event types (run.started, step.progress, tool.call, tool.result, approval.request, run.finished).
+- Implements EventEmitter with thread-safe subscribe, synchronous emit, and blocking wait_for.
+- Ensures the core agent logic never has direct dependencies on the CLI or frontend display code.
+"""
 import uuid
 import time
 import threading

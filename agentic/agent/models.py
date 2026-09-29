@@ -1,3 +1,13 @@
+"""
+agent.models — Ollama Model Client & Tool Call Parser
+
+WHAT THIS FILE DOES:
+- Connects to Ollama's local HTTP API (/api/chat) using only Python stdlib (urllib).
+- Resolves model roles ('main' and 'fallback') from config dynamically.
+- Handles tool calling: parses native Ollama tool calls AND falls back to regex/json parsing if model outputs json text.
+- Measures tokens in/out and round-trip duration in milliseconds.
+- Supports request cancellation, timeouts, and optional thinking mode.
+"""
 import json
 import time
 import urllib.request

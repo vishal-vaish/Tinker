@@ -1,3 +1,11 @@
+"""
+agent.tools.write_tools — Precise Code Modification Tools
+
+WHAT THIS FILE DOES:
+- edit_file: Replaces a strictly UNIQUE string in an existing file. Fails loudly if old_string is missing or appears more than once, preventing accidental duplicate replacements.
+- create_file: Creates a new file with specified content. Fails if the file already exists (preventing accidental overwriting).
+- Both tools enforce path jail boundaries and return concise change descriptions.
+"""
 import os
 from agent.tools.registry import ToolDef, ToolRegistry
 
