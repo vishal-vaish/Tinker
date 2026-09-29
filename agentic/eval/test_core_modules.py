@@ -220,5 +220,66 @@ class TestReport(unittest.TestCase):
         self.assertIn('run_123', text)
 
 
+class TestStacks(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_detect_python_stack(self):
+        from agent.stacks import detect_single_primary_stack
+        with open(os.path.join(self.temp_dir, 'main.py'), 'w') as f:
+            f.write("print('hello')")
+        stack = detect_single_primary_stack(self.temp_dir)
+        self.assertEqual(stack.name, 'python')
+
+    def test_detect_nextjs_stack(self):
+        from agent.stacks import detect_single_primary_stack
+        pkg = {
+            "dependencies": {"next": "^14.0.0", "react": "^18.2.0"}
+        }
+        with open(os.path.join(self.temp_dir, 'package.json'), 'w') as f:
+            import json
+            json.dump(pkg, f)
+        with open(os.path.join(self.temp_dir, 'next.config.mjs'), 'w') as f:
+            f.write("export default {}")
+
+        stack = detect_single_primary_stack(self.temp_dir)
+        self.assertEqual(stack.name, 'nextjs')
+
+    def test_detect_vite_stack(self):
+        from agent.stacks import detect_single_primary_stack
+        with open(os.path.join(self.temp_dir, 'vite.config.ts'), 'w') as f:
+            f.write("export default {}")
+        stack = detect_single_primary_stack(self.temp_dir)
+        self.assertEqual(stack.name, 'vite')
+
+    def test_stack_mismatch_fails_validation(self):
+        from agent.stacks import validate_and_resolve_stack
+        with open(os.path.join(self.temp_dir, 'utils.py'), 'w') as f:
+            f.write("x = 1")
+        is_valid, msg, res = validate_and_resolve_stack(self.temp_dir, requested_stack="nextjs")
+        self.assertFalse(is_valid)
+        self.assertIn("Stack mismatch", msg)
+
+    def test_mixed_stack_is_rejected(self):
+        from agent.stacks import validate_and_resolve_stack
+        with open(os.path.join(self.temp_dir, 'main.py'), 'w') as f:
+            f.write("x = 1")
+        is_valid, msg, res = validate_and_resolve_stack(self.temp_dir, requested_stack="python,vite")
+        self.assertFalse(is_valid)
+        self.assertIn("Only ONE stack can be selected at a time", msg)
+
+    def test_auto_stack_resolves_cleanly(self):
+        from agent.stacks import validate_and_resolve_stack
+        with open(os.path.join(self.temp_dir, 'app.py'), 'w') as f:
+            f.write("x = 1")
+        is_valid, msg, res = validate_and_resolve_stack(self.temp_dir, requested_stack="auto")
+        self.assertTrue(is_valid)
+        self.assertEqual(res.name, "python")
+        self.assertIn("python", res.allowed_commands)
+
+
 if __name__ == '__main__':
     unittest.main()

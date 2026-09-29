@@ -39,6 +39,7 @@ from agent.context import ContextManager
 from agent.plan import PlanManager
 from agent.tracing import RunTracer
 from agent.report import build_report, format_report_text
+from agent.stacks import validate_and_resolve_stack, ResolvedProjectStack, StackValidationError
 
 
 SYSTEM_PROMPT = """You are an expert coding agent. Your goal is to solve a coding task by exploring code, editing files, running tests, fixing bugs, and verifying your work.
@@ -89,19 +90,26 @@ class AgentLoop:
         self._cancelled = True
         self.model.cancel()
 
-    def run(self, task: str, project_root: str) -> dict:
+    def run(self, task: str, project_root: str, requested_stack: str = "auto") -> dict:
         """
         Run the agent on a coding task.
 
         Args:
             task: What the agent should do
             project_root: Absolute path to the project directory
+            requested_stack: 'auto', or stack name(s) e.g. 'react', 'nextjs', 'python,vite'
 
         Returns:
             Run summary dict
         """
         self._cancelled = False
         project_root = os.path.realpath(os.path.abspath(project_root))
+
+        # ── Step 0: Validate and Resolve Framework Stack at Project Start ─────
+        is_valid, stack_msg, resolved_stack = validate_and_resolve_stack(project_root, requested_stack)
+        if not is_valid:
+            raise StackValidationError(stack_msg)
+
         run_id = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid.uuid4().hex[:6]
 
         # Base directory for runs
@@ -113,9 +121,11 @@ class AgentLoop:
         self.emitter.set_run_id(run_id)
         self.emitter.subscribe(None, tracer.record_event)
 
-        # Setup safety systems
-        jail = PathJail(project_root)
+        # Setup safety systems with dynamic stack permissions
+        jail = PathJail(project_root, test_patterns=resolved_stack.test_patterns)
         allowlist = CommandAllowlist(self.config.allowed_commands)
+        allowlist.add_allowed(resolved_stack.allowed_commands)
+
         gate = PermissionGate(
             jail=jail,
             allowlist=allowlist,
@@ -123,7 +133,7 @@ class AgentLoop:
             approval_timeout=self.config.approval_timeout,
         )
 
-        # Setup tools
+        # Setup tools with stack-specific verification command
         tools = ToolRegistry()
         register_read_tools(tools, project_root)
         register_write_tools(tools, project_root)
@@ -131,6 +141,7 @@ class AgentLoop:
             tools, project_root,
             command_timeout=self.config.command_timeout,
             output_cap=self.config.output_cap_bytes,
+            test_command=resolved_stack.default_verify_command,
         )
 
         # Setup context manager
@@ -142,12 +153,13 @@ class AgentLoop:
 
         # Setup scratchpad plan
         plan_mgr = PlanManager(tracer.plan_path)
-        plan_mgr.write(f"# Plan for: {task}\n\n1. Run tests to see current failures\n2. Locate the bug\n3. Apply fix\n4. Verify tests pass\n")
+        plan_mgr.write(f"# Plan for: {task}\n\n1. Run tests/build to see current state\n2. Locate the issue\n3. Apply fix\n4. Verify tests/build pass\n")
 
-        # Emit run started
+        # Emit run started with stack information
         self.emitter.emit(RUN_STARTED, {
             'task': task,
             'project_root': project_root,
+            'stack': resolved_stack.summary(),
             'config': {
                 'max_steps': self.config.max_steps,
                 'max_time_seconds': self.config.max_time_seconds,
@@ -156,18 +168,23 @@ class AgentLoop:
             },
         })
 
-        # --- Baseline: Run tests before any changes ---
-        initial_test_result = _run_tests(project_root=project_root)
-        with open(os.path.join(tracer.run_dir, 'artifacts', 'tests_before.txt'), 'w') as f:
+        # --- Baseline: Run tests/build before any changes ---
+        initial_test_result = _run_tests(command=resolved_stack.default_verify_command, project_root=project_root)
+        with open(os.path.join(tracer.run_dir, 'artifacts', 'tests_before.txt'), 'w', encoding='utf-8') as f:
             f.write(initial_test_result)
 
         # --- Snapshot project before any edits ---
         snapshot_dir = os.path.join(tracer.run_dir, 'snapshot')
         self._take_snapshot(project_root, snapshot_dir)
 
+        # Prepare system prompt with framework guidance
+        active_system_prompt = SYSTEM_PROMPT
+        if resolved_stack.prompt_guidance:
+            active_system_prompt += f"\n\nFRAMEWORK & STACK GUIDANCE:\n{resolved_stack.prompt_guidance}"
+
         # State tracking
         full_message_history: list[dict] = [
-            {'role': 'system', 'content': SYSTEM_PROMPT},
+            {'role': 'system', 'content': active_system_prompt},
             {'role': 'user', 'content': (
                 f"Task: {task}\n\n"
                 f"Project directory: {project_root}\n\n"
@@ -294,7 +311,7 @@ class AgentLoop:
 
                         # Final verification: re-run tests from clean state
                         if self.config.final_verification:
-                            final_test = _run_tests(project_root=project_root)
+                            final_test = _run_tests(command=resolved_stack.default_verify_command, project_root=project_root)
                             if 'TESTS PASSED' in final_test:
                                 if gate.has_modified_tests:
                                     status = 'failed'
@@ -432,8 +449,8 @@ class AgentLoop:
         end_time = time.time()
 
         # --- Final test run after all changes ---
-        final_test_result = _run_tests(project_root=project_root)
-        with open(os.path.join(tracer.run_dir, 'artifacts', 'tests_after.txt'), 'w') as f:
+        final_test_result = _run_tests(command=resolved_stack.default_verify_command, project_root=project_root)
+        with open(os.path.join(tracer.run_dir, 'artifacts', 'tests_after.txt'), 'w', encoding='utf-8') as f:
             f.write(final_test_result)
 
         # Generate diff of changes

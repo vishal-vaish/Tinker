@@ -16,9 +16,10 @@ class SecurityError(Exception):
 class PathJail:
     """Restricts file access to within a project root directory."""
     
-    def __init__(self, project_root: str):
+    def __init__(self, project_root: str, test_patterns: list[str] | None = None):
         self.project_root = os.path.realpath(os.path.abspath(project_root))
-    
+        self.test_patterns = test_patterns or []
+
     def check(self, path: str) -> str:
         """
         Validate that a path is inside the project root.
@@ -51,13 +52,30 @@ class PathJail:
         return resolved
     
     def is_test_file(self, path: str) -> bool:
-        """Check if a file is a test file (matches test_*.py or *_test.py)."""
-        basename = os.path.basename(path).lower()
-        return (
-            basename.startswith('test_') and basename.endswith('.py')
-        ) or (
-            basename.endswith('_test.py')
-        )
+        """Check if a file is a test file across Python, React, Next.js, and web stacks."""
+        norm = path.replace("\\", "/").lower()
+        basename = os.path.basename(norm)
+
+        # 1. Directory based
+        if "/__tests__/" in norm or norm.startswith("__tests__/"):
+            return True
+
+        # 2. Python patterns
+        if (basename.startswith("test_") and basename.endswith(".py")) or basename.endswith("_test.py"):
+            return True
+
+        # 3. JavaScript / TypeScript / React / Next.js patterns
+        for ext in [".js", ".jsx", ".ts", ".tsx", ".mjs"]:
+            if basename.endswith(f".test{ext}") or basename.endswith(f".spec{ext}"):
+                return True
+
+        # 4. Custom configured patterns
+        import fnmatch
+        for pat in self.test_patterns:
+            if fnmatch.fnmatch(basename, pat) or fnmatch.fnmatch(norm, pat):
+                return True
+
+        return False
     
     def relative(self, path: str) -> str:
         """Return the path relative to project root."""

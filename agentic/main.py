@@ -20,6 +20,14 @@ import signal
 import time
 from datetime import datetime
 
+# Configure stdout and stderr for UTF-8 on Windows consoles
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # Add parent directory to path so 'agent' package is importable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,6 +40,7 @@ from agent.events import (
 )
 from agent.loop import AgentLoop
 from agent.report import format_report_text
+from agent.stacks import StackValidationError
 
 
 # ─── CLI Event Handlers (thin display layer, no agent logic) ─────────────────
@@ -47,6 +56,8 @@ def on_run_started(event: Event):
     print(f"  Task:     {p.get('task', '')[:80]}")
     print(f"  Project:  {p.get('project_root', '')}")
     print(f"  Model:    {p.get('config', {}).get('model_main', 'unknown')}")
+    if p.get('stack'):
+        print(f"  Stack:    {p.get('stack')}")
     print(f"  Budget:   {p.get('config', {}).get('max_steps', '?')} steps / "
           f"{p.get('config', {}).get('max_time_seconds', '?')}s")
     print("─" * 62)
@@ -137,6 +148,9 @@ Examples:
     )
     parser.add_argument('--project', required=True, help='Path to the project directory')
     parser.add_argument('--task', required=True, help='Task description for the agent')
+    parser.add_argument('--stack', default='auto',
+                        choices=['auto', 'python', 'html', 'react', 'vite', 'nextjs'],
+                        help='Target framework stack (one at a time: auto, python, html, react, vite, nextjs). Default: auto')
     parser.add_argument('--config', default=None, help='Path to config.toml (default: auto-detect)')
     
     args = parser.parse_args()
@@ -188,7 +202,10 @@ Examples:
     
     # Run the agent
     try:
-        summary = agent.run(task=args.task, project_root=project_root)
+        summary = agent.run(task=args.task, project_root=project_root, requested_stack=args.stack)
+    except StackValidationError as e:
+        print(f"\n  ❌ Stack Verification Failed:\n     {e}\n", file=sys.stderr)
+        sys.exit(1)
     except ConnectionError as e:
         print(f"\n  ❌ Cannot connect to Ollama: {e}")
         print("     Make sure Ollama is running: ollama serve")

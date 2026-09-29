@@ -1,0 +1,1 @@
+Fix the button ID mismatch between index.html and app.js so that the submit button event listener attaches to the button defined in index.html. Ensure the test passes.

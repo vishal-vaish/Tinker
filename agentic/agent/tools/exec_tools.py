@@ -87,16 +87,15 @@ def _run_tests(command: str = '', project_root: str = '',
         if 'OK' == line.strip() or line.strip().startswith('FAILED') or line.strip().startswith('OK'):
             result_line = line.strip()
     
-    # Find failing test names and errors
+    # Find failing test names and errors (Python, Jest, Vitest, TypeScript compiler, Next.js)
     failing_tests = []
     error_lines = []
     current_test = ''
     in_traceback = False
     
     for line in lines:
-        # Match test failure/error headers
-        # e.g., "FAIL: test_name (module.TestClass.test_name)"
-        # or "ERROR: test_name (module.TestClass.test_name)"
+        stripped = line.strip()
+        # 1. Python unittest: "FAIL: test_name ..." or "ERROR: test_name ..."
         fail_match = re.match(r'^(FAIL|ERROR): (\S+)', line)
         if fail_match:
             current_test = line.strip()
@@ -104,9 +103,20 @@ def _run_tests(command: str = '', project_root: str = '',
             in_traceback = True
             continue
         
-        # Capture key error lines (the actual error message)
+        # 2. Jest / Vitest: "FAIL src/App.test.tsx" or "✕ should do something"
+        if stripped.startswith(('FAIL ', '✕ ', '× ')):
+            failing_tests.append(stripped)
+            continue
+
+        # 3. TypeScript / Next.js / Vite build errors
+        if any(keyword in stripped for keyword in [
+            'Type error:', 'Failed to compile', 'SyntaxError:', '[vite]', 'TS2304:', 'TS2322:', 'TS2339:', 'TS2345:'
+        ]):
+            error_lines.append(stripped[:250])
+            continue
+        
+        # Capture key Python error lines
         if in_traceback:
-            stripped = line.strip()
             if stripped.startswith(('AssertionError', 'AssertionError:', 
                                    'AttributeError', 'TypeError', 'NameError',
                                    'KeyError', 'ValueError', 'ImportError',
@@ -137,6 +147,16 @@ def _run_tests(command: str = '', project_root: str = '',
                     parts.append(f"     → {error_lines[i]}")
             if len(failing_tests) > 10:
                 parts.append(f"  ... and {len(failing_tests) - 10} more")
+        elif error_lines:
+            parts.append(f"\nError details ({len(error_lines)}):")
+            for i, err in enumerate(error_lines[:10]):
+                parts.append(f"  - {err}")
+        else:
+            # Fallback: show last few non-empty lines of output
+            tail_lines = [l.strip() for l in lines if l.strip()][-8:]
+            if tail_lines:
+                parts.append("\nOutput summary:")
+                parts.append('\n'.join(tail_lines))
     
     report = '\n'.join(parts)
     

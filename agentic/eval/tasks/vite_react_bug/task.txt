@@ -1,0 +1,1 @@
+In src/App.jsx, fix the state setter call in handleIncrement so it uses the declared 'setCount' updater instead of 'setCounter'. Ensure tests pass.

@@ -128,10 +128,15 @@ def _search_text(pattern: str, path: str = '.', project_root: str = '') -> str:
         regex = re.compile(re.escape(pattern), re.IGNORECASE)
     
     for root, dirs, files in os.walk(search_dir):
-        # Skip hidden dirs and __pycache__
-        dirs[:] = [d for d in dirs if not d.startswith('.') and d != '__pycache__']
+        # Skip hidden dirs, caches, and build folders
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in (
+            '__pycache__', 'node_modules', '.next', 'dist', 'build', 'coverage', '.turbo'
+        )]
         for fname in sorted(files):
-            if not fname.endswith(('.py', '.txt', '.md', '.toml', '.json', '.cfg', '.ini', '.yaml', '.yml')):
+            if not fname.endswith((
+                '.py', '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.scss',
+                '.json', '.mjs', '.cjs', '.toml', '.yaml', '.yml', '.md', '.txt'
+            )):
                 continue
             fpath = os.path.join(root, fname)
             try:

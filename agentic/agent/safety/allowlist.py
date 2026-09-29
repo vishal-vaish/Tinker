@@ -21,6 +21,13 @@ class CommandAllowlist:
                 e.g. ['python -m unittest', 'git status', 'git diff']
         """
         self.allowed = [cmd.strip() for cmd in allowed_commands]
+
+    def add_allowed(self, extra_commands: list[str]):
+        """Dynamically add allowed command prefixes (e.g. from detected stack)."""
+        for cmd in extra_commands:
+            cleaned = cmd.strip()
+            if cleaned and cleaned not in self.allowed:
+                self.allowed.append(cleaned)
     
     def is_allowed(self, command: str) -> tuple[bool, str]:
         """

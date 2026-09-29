@@ -1,0 +1,1 @@
+In app/page.tsx, fix the props passed to UserCard so that it passes the required 'age' prop instead of 'email', conforming to the UserCardProps interface.

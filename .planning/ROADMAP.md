@@ -30,3 +30,13 @@
 ### Phase 7: Eval Runner + Accuracy Gate
 **Status:** 🟢 COMPLETE
 **Scope:** eval/runner.py with SQLite storage, best-of-N, and results table.
+
+## Milestone 2: Universal Multi-Framework & Polyglot Stack Support
+
+### Phase 8: Framework Profiles & Startup Validator
+**Status:** 🟢 COMPLETE
+**Scope:** `agent.stacks` registry and detector for Python, HTML, React, Vite, Next.js, and polyglot setups. Early startup validation with fail-fast mismatch rejection via `--stack`.
+
+### Phase 9: Multi-Stack Tooling & Web Benchmarks
+**Status:** 🟢 COMPLETE
+**Scope:** PathJail test file patterns (`*.test.tsx`, `*.spec.ts`), dynamic CommandAllowlist (`npm`, `npx`, `node`), polyglot test output parsing, and 3 new web evaluation projects (`html_dom_bug`, `vite_react_bug`, `nextjs_type_error`).
