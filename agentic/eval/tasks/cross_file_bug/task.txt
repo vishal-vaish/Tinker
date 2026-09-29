@@ -1,0 +1,1 @@
+Fix the argument mismatch and wrong key access in formatter.py. The function should call load_records with a filepath argument and access the 'score' key instead of 'grade'.

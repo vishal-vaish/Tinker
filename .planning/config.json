@@ -1,0 +1,16 @@
+{
+  "project_name": "Mini Coding Agent",
+  "project_root": "e:\\vishal\\Tinker\\agentic",
+  "created_at": "2026-09-29T12:29:00+05:30",
+  "workflow": {
+    "auto_commit": true,
+    "require_tests": true,
+    "require_verification": true,
+    "model_profile": "quality"
+  },
+  "preferences": {
+    "language": "python",
+    "test_framework": "unittest",
+    "commit_style": "conventional"
+  }
+}
