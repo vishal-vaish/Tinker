@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ws-acme-corp",
+    "ownerId": "usr_vishal",
+    "name": "Acme Corp",
+    "slug": "acme-corp",
+    "avatarUrl": "",
+    "memberCount": 18,
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-30T10:00:00.000Z"
+  },
+  {
+    "id": "ws-personal",
+    "ownerId": "usr_vishal",
+    "name": "Personal Sandbox",
+    "slug": "personal-sandbox",
+    "avatarUrl": "",
+    "memberCount": 1,
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-02T12:00:00.000Z",
+    "updatedAt": "2026-09-29T18:00:00.000Z"
+  },
+  {
+    "id": "ws-neural-labs",
+    "ownerId": "usr_vishal",
+    "name": "Neural Labs",
+    "slug": "neural-labs",
+    "avatarUrl": "",
+    "memberCount": 6,
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-05T08:30:00.000Z",
+    "updatedAt": "2026-09-30T09:15:00.000Z"
+  }
+]

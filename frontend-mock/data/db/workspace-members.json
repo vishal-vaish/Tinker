@@ -1,0 +1,42 @@
+[
+  {
+    "id": "mem_vishal_acme",
+    "workspaceId": "ws-acme-corp",
+    "userId": "usr_vishal",
+    "role": "admin",
+    "joinedAt": "2026-09-01T00:00:00.000Z",
+    "createdAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "mem_elena_acme",
+    "workspaceId": "ws-acme-corp",
+    "userId": "usr_elena",
+    "role": "member",
+    "joinedAt": "2026-09-02T10:00:00.000Z",
+    "createdAt": "2026-09-02T10:00:00.000Z"
+  },
+  {
+    "id": "mem_marcus_acme",
+    "workspaceId": "ws-acme-corp",
+    "userId": "usr_marcus",
+    "role": "viewer",
+    "joinedAt": "2026-09-03T14:30:00.000Z",
+    "createdAt": "2026-09-03T14:30:00.000Z"
+  },
+  {
+    "id": "mem_vishal_personal",
+    "workspaceId": "ws-personal",
+    "userId": "usr_vishal",
+    "role": "admin",
+    "joinedAt": "2026-09-02T12:00:00.000Z",
+    "createdAt": "2026-09-02T12:00:00.000Z"
+  },
+  {
+    "id": "mem_vishal_neural",
+    "workspaceId": "ws-neural-labs",
+    "userId": "usr_vishal",
+    "role": "member",
+    "joinedAt": "2026-09-05T08:30:00.000Z",
+    "createdAt": "2026-09-05T08:30:00.000Z"
+  }
+]

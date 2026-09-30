@@ -42,7 +42,7 @@ export function SignUpForm({ onSwitchToSignIn, onToggleMode }: SignUpFormProps) 
     try {
       const response = await registerEndpoint(data);
       if (response.success) {
-        router.push("/");
+        router.push("/workspace");
       }
     } catch (err) {
       console.error("Registration failed:", err);
@@ -56,7 +56,7 @@ export function SignUpForm({ onSwitchToSignIn, onToggleMode }: SignUpFormProps) 
     try {
       const response = await oauthLoginEndpoint(provider);
       if (response.success) {
-        router.push("/");
+        router.push("/workspace");
       }
     } catch (err) {
       console.error("OAuth login failed:", err);

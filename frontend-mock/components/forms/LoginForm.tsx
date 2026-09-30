@@ -39,7 +39,7 @@ export function LoginForm({ onSwitchToSignUp, onToggleMode }: LoginFormProps) {
     try {
       const response = await loginEndpoint(data);
       if (response.success) {
-        router.push("/");
+        router.push("/workspace");
       }
     } catch (err) {
       console.error("Login failed:", err);
@@ -53,7 +53,7 @@ export function LoginForm({ onSwitchToSignUp, onToggleMode }: LoginFormProps) {
     try {
       const response = await oauthLoginEndpoint(provider);
       if (response.success) {
-        router.push("/");
+        router.push("/workspace");
       }
     } catch (err) {
       console.error("OAuth login failed:", err);

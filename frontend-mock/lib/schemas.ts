@@ -61,3 +61,33 @@ export const forgotPasswordSchema = z.object({
 });
 
 export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+// ============================================================================
+// Workspace Schemas
+// ============================================================================
+
+/**
+ * Create Workspace Form Validation Schema
+ */
+export const createWorkspaceSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Workspace name must be at least 2 characters")
+    .max(50, "Workspace name is too long"),
+  slug: z
+    .string()
+    .min(2, "Workspace slug must be at least 2 characters")
+    .max(50, "Workspace slug is too long")
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug must only contain lowercase letters, numbers, and hyphens"
+    ),
+  initialMemberEmail: z
+    .string()
+    .email("Please enter a valid email address")
+    .optional()
+    .or(z.literal("")),
+  memberRole: z.enum(["admin", "member", "viewer"]),
+});
+
+export type CreateWorkspaceFormValues = z.infer<typeof createWorkspaceSchema>;

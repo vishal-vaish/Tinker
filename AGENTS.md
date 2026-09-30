@@ -26,3 +26,8 @@
 
 ## 3. Design System & Tokens
 - Strictly follow the Tailwind v4 OKLCH token configuration defined in `app/globals.css`.
+- **Contrasting "Colored" Elements (No Primary Palette Bleed)**: Whenever an element, badge, tag, status pill, or indicator is requested to be "colored", NEVER default to or use colors near the primary theme palette (which is cool blue/indigo in this app). Using primary blue causes the element to blend into the UI instead of looking distinctly "colored". Instead, always use distinctive, contrasting accent colors:
+  - **PRO / Paid / Premium Tiers**: Warm Amber / Gold / Orange (`bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold border-0 shadow-xs shadow-amber-500/20`).
+  - **FREE / Neutral Tiers**: Subtle outline or muted secondary (`variant="outline" text-muted-foreground border-border`).
+  - **Success / Active**: Emerald Green (`emerald-500`).
+  - **Highlight / Special**: Rose / Fuchsia (`rose-500` or `fuchsia-600`).

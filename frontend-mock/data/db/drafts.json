@@ -1,0 +1,53 @@
+[
+  {
+    "id": "draft-auth-portal",
+    "workspaceId": "ws-acme-corp",
+    "projectId": "proj-ecommerce",
+    "title": "Auth Portal Boilerplate",
+    "description": "Multi-tenant auth flow with floating labels and mTLS session validation",
+    "framework": "nextjs",
+    "modelUsed": "Claude 3.7 Sonnet",
+    "isPinned": true,
+    "status": "ready",
+    "promptsCount": 8,
+    "previewUrl": "/preview/draft-auth-portal",
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-30T09:00:00.000Z",
+    "updatedAt": "2026-09-30T10:45:00.000Z"
+  },
+  {
+    "id": "draft-fastify-gateway",
+    "workspaceId": "ws-acme-corp",
+    "projectId": "proj-agent-runner",
+    "title": "Fastify WebContainer Gateway",
+    "description": "High-throughput edge microservice proxy with streaming JSON responses",
+    "framework": "fastify",
+    "modelUsed": "GPT-4o",
+    "isPinned": true,
+    "status": "ready",
+    "promptsCount": 5,
+    "previewUrl": "/preview/draft-fastify-gateway",
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-29T14:20:00.000Z",
+    "updatedAt": "2026-09-30T08:15:00.000Z"
+  },
+  {
+    "id": "draft-analytics-canvas",
+    "workspaceId": "ws-acme-corp",
+    "projectId": "proj-neural-sandbox",
+    "title": "Realtime Analytics Canvas",
+    "description": "Low-latency WebGL telemetry chart dashboard with OKLCH theme engine",
+    "framework": "vite",
+    "modelUsed": "DeepSeek-R1",
+    "isPinned": false,
+    "status": "ready",
+    "promptsCount": 12,
+    "previewUrl": "/preview/draft-analytics-canvas",
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-28T11:10:00.000Z",
+    "updatedAt": "2026-09-29T16:00:00.000Z"
+  }
+]

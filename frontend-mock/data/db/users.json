@@ -1,0 +1,14 @@
+[
+  {
+    "id": "usr_vishal",
+    "email": "vishal@tinker.dev",
+    "firstName": "Vishal",
+    "lastName": "Sharma",
+    "name": "Vishal Sharma",
+    "avatarUrl": "",
+    "role": "admin",
+    "plan": "pro",
+    "createdAt": "2026-09-01T00:00:00.000Z",
+    "updatedAt": "2026-09-30T10:00:00.000Z"
+  }
+]

@@ -41,6 +41,10 @@ export async function loginEndpoint(
       id: "usr_mock_12345",
       email: data.email,
       name: data.email.split("@")[0],
+      role: "admin",
+      plan: "pro",
+      tokensAvailable: 85400,
+      createdAt: "2026-09-01T00:00:00.000Z",
       token: "jwt_mock_token_tinker_production",
     },
   };
@@ -73,7 +77,13 @@ export async function registerEndpoint(
     data: {
       id: "usr_mock_67890",
       email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
       name: `${data.firstName} ${data.lastName}`.trim(),
+      role: "user",
+      plan: "free",
+      tokensAvailable: 100000,
+      createdAt: new Date().toISOString(),
       token: "jwt_mock_token_tinker_production",
     },
   };

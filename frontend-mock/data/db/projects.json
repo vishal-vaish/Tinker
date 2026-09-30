@@ -1,0 +1,47 @@
+[
+  {
+    "id": "proj-ecommerce",
+    "workspaceId": "ws-acme-corp",
+    "name": "e-commerce-engine",
+    "description": "Production Next.js 16 storefront with edge Redis cache and isolated PostgreSQL schema",
+    "framework": "nextjs",
+    "status": "active",
+    "visibility": "private",
+    "starsCount": 42,
+    "branch": "main",
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-02T10:00:00.000Z",
+    "updatedAt": "2026-09-30T10:12:00.000Z"
+  },
+  {
+    "id": "proj-neural-sandbox",
+    "workspaceId": "ws-acme-corp",
+    "name": "neural-sandbox-core",
+    "description": "In-browser WebContainer runner with WebAssembly POSIX sandbox and path-jail isolation",
+    "framework": "vite",
+    "status": "ready",
+    "visibility": "public",
+    "starsCount": 118,
+    "branch": "stable",
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-10T14:30:00.000Z",
+    "updatedAt": "2026-09-29T18:40:00.000Z"
+  },
+  {
+    "id": "proj-agent-runner",
+    "workspaceId": "ws-acme-corp",
+    "name": "cloud-agent-runner",
+    "description": "Autonomous fullstack agent orchestration pipeline with AST lint verification",
+    "framework": "fastify",
+    "status": "building",
+    "visibility": "private",
+    "starsCount": 15,
+    "branch": "dev",
+    "createdBy": "usr_vishal",
+    "updatedBy": "usr_vishal",
+    "createdAt": "2026-09-15T09:00:00.000Z",
+    "updatedAt": "2026-09-29T09:30:00.000Z"
+  }
+]

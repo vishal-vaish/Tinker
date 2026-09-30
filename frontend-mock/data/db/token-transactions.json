@@ -1,0 +1,40 @@
+[
+  {
+    "id": "tx_grant_sep2026",
+    "userId": "usr_vishal",
+    "amount": 100000,
+    "type": "GRANT",
+    "stripePaymentId": "sub_pro_100k_sep",
+    "pricePaidUsd": 20.0,
+    "balanceAfter": 100000,
+    "createdBy": "usr_vishal",
+    "createdAt": "2026-09-01T00:00:00.000Z"
+  },
+  {
+    "id": "tx_use_draft_auth",
+    "userId": "usr_vishal",
+    "amount": -5000,
+    "type": "USAGE",
+    "balanceAfter": 95000,
+    "createdBy": "usr_vishal",
+    "createdAt": "2026-09-30T09:15:00.000Z"
+  },
+  {
+    "id": "tx_use_draft_fastify",
+    "userId": "usr_vishal",
+    "amount": -4600,
+    "type": "USAGE",
+    "balanceAfter": 90400,
+    "createdBy": "usr_vishal",
+    "createdAt": "2026-09-30T09:45:00.000Z"
+  },
+  {
+    "id": "tx_use_draft_analytics",
+    "userId": "usr_vishal",
+    "amount": -5000,
+    "type": "USAGE",
+    "balanceAfter": 85400,
+    "createdBy": "usr_vishal",
+    "createdAt": "2026-09-30T10:30:00.000Z"
+  }
+]
