@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-import { AgentationProvider } from "@/components/global/AgentationProvider";
+import { AgentationProvider } from "@/providers/AgentationProvider";
 
 export const metadata: Metadata = {
   title: "Tinker — Autonomous Agentic Coding Platform",

@@ -8,6 +8,7 @@ import { ArrowRight, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CustomInput from "@/components/global/CustomInput";
 import { signUpSchema, type SignUpFormValues } from "@/lib/schemas";
+import { registerEndpoint, oauthLoginEndpoint } from "@/action";
 
 interface SignUpFormProps {
   onSwitchToSignIn?: () => void;
@@ -36,20 +37,32 @@ export function SignUpForm({ onSwitchToSignIn, onToggleMode }: SignUpFormProps) 
     },
   });
 
-  const onSubmit = (_data: SignUpFormValues) => {
+  const onSubmit = async (data: SignUpFormValues) => {
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await registerEndpoint(data);
+      if (response.success) {
+        router.push("/");
+      }
+    } catch (err) {
+      console.error("Registration failed:", err);
+    } finally {
       setIsLoading(false);
-      router.push("/");
-    }, 600);
+    }
   };
 
-  const handleOAuthLogin = (_provider: string) => {
+  const handleOAuthLogin = async (provider: string) => {
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const response = await oauthLoginEndpoint(provider);
+      if (response.success) {
+        router.push("/");
+      }
+    } catch (err) {
+      console.error("OAuth login failed:", err);
+    } finally {
       setIsLoading(false);
-      router.push("/");
-    }, 400);
+    }
   };
 
   return (

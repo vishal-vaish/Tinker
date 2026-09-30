@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FOOTER_LINKS } from "@/lib/mock-data";
 import { Logo } from "@/components/global/Logo";
 
-export function Footer() {
+export function HeroFooter() {
   return (
     <footer className="border-t border-border bg-card/40 text-xs text-muted-foreground select-none">
       <div className="max-w-6xl mx-auto px-6 py-12">

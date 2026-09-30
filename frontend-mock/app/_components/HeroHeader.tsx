@@ -5,8 +5,17 @@ import Link from "next/link";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/global/Logo";
+import type { NavLinkItem } from "@/lib/types";
 
-export function Header() {
+const navLinks: NavLinkItem[] = [
+  { label: "How It Works", href: "#how-it-works" },
+  { label: "Features", href: "#features" },
+  { label: "Frameworks", href: "#frameworks" },
+  { label: "Reviews", href: "#testimonials" },
+  { label: "FAQ", href: "#faq" },
+];
+
+export function HeroHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -17,20 +26,6 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  interface NavLinkItem {
-    label: string;
-    href: string;
-    hasArrow?: boolean;
-  }
-
-  const navLinks: NavLinkItem[] = [
-    { label: "How It Works", href: "#how-it-works" },
-    { label: "Features", href: "#features" },
-    { label: "Frameworks", href: "#frameworks" },
-    { label: "Reviews", href: "#testimonials" },
-    { label: "FAQ", href: "#faq" },
-  ];
 
   return (
     <header
@@ -49,7 +44,7 @@ export function Header() {
           </span>
         </Link>
 
-        {/* Center: Rounded Pill Container with gray-700 Border */}
+        {/* Center: Rounded Pill Container */}
         <nav className="hidden lg:flex items-center gap-1 px-4 py-1.5 rounded-full border border-gray-700 bg-black/40 backdrop-blur-md shadow-inner">
           {navLinks.map((link) => (
             <Link
@@ -68,27 +63,20 @@ export function Header() {
         {/* Right: Actions */}
         <div className="hidden sm:flex items-center gap-3">
           <Link href="/login">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sm font-medium text-white/80 hover:text-white hover:bg-white/10 h-9 px-4 rounded-full transition-colors cursor-pointer"
-            >
+            <Button variant="ghost" size="sm" className="rounded-full">
               Login
             </Button>
           </Link>
 
           <Link href="/login">
-            <Button
-              size="sm"
-              className="h-9 px-4 rounded-full gap-1.5 bg-white text-black hover:bg-white/90 font-medium text-xs transition-all duration-200 cursor-pointer"
-            >
+            <Button size="sm" className="rounded-full gap-1.5">
               <span>Get Started</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Button>
           </Link>
         </div>
 
-        {/* Mobile Hamburger Toggle (Visible on screens smaller than lg) */}
+        {/* Mobile Hamburger Toggle */}
         <div className="flex lg:hidden items-center gap-2">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -118,12 +106,12 @@ export function Header() {
           </nav>
           <div className="pt-4 border-t border-gray-800/80 flex items-center gap-3">
             <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-              <Button variant="outline" className="w-full text-sm rounded-full border-gray-700 text-white hover:bg-white/10 cursor-pointer">
+              <Button variant="outline" className="w-full rounded-full">
                 Login
               </Button>
             </Link>
             <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex-1">
-              <Button className="w-full text-sm rounded-full bg-white text-black hover:bg-white/90 font-medium cursor-pointer">
+              <Button className="w-full rounded-full">
                 Get Started
               </Button>
             </Link>

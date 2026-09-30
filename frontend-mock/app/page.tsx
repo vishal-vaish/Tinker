@@ -1,5 +1,5 @@
-import { Header } from "@/components/global/Header";
-import { Footer } from "@/components/global/Footer";
+import { HeroHeader } from "./_components/HeroHeader";
+import { HeroFooter } from "./_components/HeroFooter";
 import { Hero } from "./_components/Hero";
 import { LiveDemo } from "./_components/LiveDemo";
 import { HowItWorks } from "./_components/HowItWorks";
@@ -13,7 +13,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/20">
       {/* Production SaaS Global Header */}
-      <Header />
+      <HeroHeader />
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -42,7 +42,7 @@ export default function LandingPage() {
       </main>
 
       {/* Production Global Footer */}
-      <Footer />
+      <HeroFooter />
     </div>
   );
 }

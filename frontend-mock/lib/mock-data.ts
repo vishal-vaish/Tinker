@@ -1,63 +1,22 @@
-export interface MetricItem {
-  label: string;
-  shortLabel?: string;
-  value: string;
-  change: string;
-  accent: "violet" | "cyan" | "emerald" | "amber";
-}
+import type {
+  MetricItem,
+  HowItWorksStep,
+  FeatureItem,
+  FrameworkItem,
+  TestimonialItem,
+  FaqItem,
+  FileTreeItem,
+} from "@/lib/types";
 
-export interface HowItWorksStep {
-  step: string;
-  title: string;
-  subtitle: string;
-  description: string;
-  accent: "violet" | "cyan" | "emerald";
-  details: string[];
-  codeSnippet: string;
-}
-
-export interface FeatureItem {
-  id: string;
-  title: string;
-  description: string;
-  tag: string;
-  iconName: "Terminal" | "Shield" | "Layers" | "Database" | "Crosshair" | "GitCompare";
-  accent: "cyan" | "violet" | "emerald" | "amber" | "rose" | "indigo";
-  bentoSpan?: string;
-  highlightText?: string;
-}
-
-export interface FrameworkItem {
-  id: string;
-  name: string;
-  tagline: string;
-  badge: string;
-  runtimeSpeed: string;
-  accentColor: string;
-  features: string[];
-}
-
-export interface TestimonialItem {
-  name: string;
-  role: string;
-  company: string;
-  avatarText: string;
-  content: string;
-  rating: number;
-  highlightBadge: string;
-}
-
-export interface FaqItem {
-  question: string;
-  answer: string;
-}
-
-export interface FileTreeItem {
-  name: string;
-  type: "file" | "folder";
-  extension?: "tsx" | "ts" | "css" | "json" | "sql";
-  active?: boolean;
-}
+export type {
+  MetricItem,
+  HowItWorksStep,
+  FeatureItem,
+  FrameworkItem,
+  TestimonialItem,
+  FaqItem,
+  FileTreeItem,
+};
 
 export const PLATFORM_METRICS: MetricItem[] = [
   {
