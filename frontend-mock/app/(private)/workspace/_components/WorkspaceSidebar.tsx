@@ -12,6 +12,7 @@ import {
   Pin,
   Clock,
   MoreVertical,
+  Star,
 } from "lucide-react";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import {
@@ -31,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { WorkspaceSelect } from "./WorkspaceSelect";
+import { SidebarDraftItem } from "./SidebarDraftItem";
 
 export function WorkspaceSidebar() {
   const router = useRouter();
@@ -46,9 +48,10 @@ export function WorkspaceSidebar() {
   } = useWorkspace();
 
   const isProjectsRoute = pathname === "/workspace/projects";
+  const favoriteDrafts = drafts.filter((d) => d.isPinned);
 
   return (
-    <Sidebar variant="sidebar" collapsible="icon" className="p-0">
+    <Sidebar variant="sidebar" collapsible="offcanvas" className="p-0">
       {/* 1. Header: Workspace Selector + Sidebar Collapse Toggle Button */}
       <SidebarHeader className="p-2.5">
         <div className="flex items-center justify-between gap-1.5">
@@ -60,7 +63,7 @@ export function WorkspaceSidebar() {
         <Button
           onClick={createNewChat}
           size="sm"
-          className="w-full justify-start gap-2 mt-2 font-medium"
+          className="w-full justify-center gap-2 mt-2 font-medium"
         >
           <Plus className="size-4" />
           <span>New Chat</span>
@@ -84,9 +87,50 @@ export function WorkspaceSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* 4. Separator Line + DRAFTS Section */}
+        {/* 4. Separator Line */}
         <SidebarSeparator className="my-2" />
 
+        {/* 5. FAVORITES Section (Rendered above Drafts when drafts are favorited) */}
+        {favoriteDrafts.length > 0 && (
+          <>
+            <SidebarGroup className="p-0">
+              <div className="flex items-center justify-between px-2 py-1">
+                <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Star className="size-3 text-amber-500 fill-amber-500" />
+                  <span>Favorites</span>
+                </SidebarGroupLabel>
+                <Badge
+                  variant="outline"
+                  className="text-[10px] font-mono px-1.5 py-0 h-4 text-amber-500 border-amber-500/30"
+                >
+                  {favoriteDrafts.length}
+                </Badge>
+              </div>
+
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {favoriteDrafts.map((draft) => {
+                    const isActive =
+                      activeDraftId === draft.id && !isProjectsRoute;
+                    return (
+                      <SidebarDraftItem
+                        key={`fav-${draft.id}`}
+                        draft={draft}
+                        isActive={isActive}
+                        hideFavoriteIcon={true}
+                        onSelect={() => selectDraft(draft.id)}
+                      />
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarSeparator className="my-2" />
+          </>
+        )}
+
+        {/* 6. DRAFTS Section */}
         <SidebarGroup className="p-0">
           <div className="flex items-center justify-between px-2 py-1">
             <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -116,31 +160,12 @@ export function WorkspaceSidebar() {
                 {drafts.map((draft) => {
                   const isActive = activeDraftId === draft.id && !isProjectsRoute;
                   return (
-                    <SidebarMenuItem key={draft.id}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        onClick={() => selectDraft(draft.id)}
-                        className="cursor-pointer flex flex-col items-start gap-0.5 py-2 h-auto"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="truncate text-xs font-medium text-foreground">
-                            {draft.title}
-                          </span>
-                          {draft.isPinned && (
-                            <Pin className="size-3 text-muted-foreground shrink-0 fill-current" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                          <Badge
-                            variant="secondary"
-                            className="text-[9px] font-mono uppercase px-1 py-0 h-3.5"
-                          >
-                            {draft.framework}
-                          </Badge>
-                          <span className="truncate">{draft.modelUsed}</span>
-                        </div>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    <SidebarDraftItem
+                      key={draft.id}
+                      draft={draft}
+                      isActive={isActive}
+                      onSelect={() => selectDraft(draft.id)}
+                    />
                   );
                 })}
               </SidebarMenu>
@@ -191,7 +216,7 @@ export function WorkspaceSidebar() {
       </SidebarContent>
 
       {/* 6. Footer: User Avatar & Name with Token count on the right */}
-      <SidebarFooter className="p-3 border-t border-sidebar-border">
+      <SidebarFooter className="p-3 border-t border-border">
         <div className="flex items-center justify-between gap-2">
           {/* User Avatar and Name */}
           <div className="flex items-center gap-2 min-w-0">
@@ -209,7 +234,7 @@ export function WorkspaceSidebar() {
           </div>
 
           {/* Real-time Token Count on the Right */}
-          <div className="flex items-center gap-1 shrink-0 px-2 py-1 rounded-md bg-sidebar-accent/60 border border-sidebar-border">
+          <div className="flex items-center gap-1 shrink-0 px-2 py-1 rounded-md bg-sidebar-accent/60 border border-border">
             <Zap className="size-3 text-amber-400 fill-amber-400" />
             <span className="text-xs font-mono font-bold text-foreground">
               {user?.tokensAvailable

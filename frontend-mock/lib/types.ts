@@ -61,6 +61,11 @@ export interface WorkspaceMemberEntity {
   createdAt: string;
 }
 
+export interface InvitedMember {
+  email: string;
+  role: "admin" | "member" | "viewer";
+}
+
 export interface ProjectEntity {
   id: string;
   workspaceId: string;

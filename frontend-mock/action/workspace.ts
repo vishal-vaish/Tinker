@@ -96,16 +96,24 @@ export async function createWorkspaceEndpoint(
   const slug =
     data.slug?.trim() || data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const now = new Date().toISOString();
-  const hasInvitedMember = Boolean(
-    data.initialMemberEmail && data.initialMemberEmail.trim()
-  );
+  
+  // Consolidate invited members
+  const invitedList = [...(data.invitedMembers || [])];
+  if (data.initialMemberEmail && data.initialMemberEmail.trim()) {
+    if (!invitedList.some((m) => m.email.toLowerCase() === data.initialMemberEmail!.toLowerCase().trim())) {
+      invitedList.push({
+        email: data.initialMemberEmail.trim(),
+        role: data.memberRole || "member",
+      });
+    }
+  }
 
   const newWorkspace: WorkspaceEntity = {
     id: `ws-${slug}-${Date.now().toString(36).slice(-4)}`,
     ownerId: userState.id,
     name: data.name,
     slug,
-    memberCount: hasInvitedMember ? 2 : 1,
+    memberCount: 1 + invitedList.length,
     createdBy: userState.id,
     updatedBy: userState.id,
     createdAt: now,
@@ -125,28 +133,27 @@ export async function createWorkspaceEndpoint(
   };
   workspaceMembersState = [...workspaceMembersState, ownerMember];
 
-  // If initial teammate was invited, add them to workspace_members
-  if (hasInvitedMember && data.initialMemberEmail) {
+  // Register each invited teammate in workspace_members and audit log
+  for (const inv of invitedList) {
     const inviteMember: WorkspaceMemberEntity = {
-      id: `mem_${Date.now().toString(36)}_inv`,
+      id: `mem_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
       workspaceId: newWorkspace.id,
-      userId: `usr_${data.initialMemberEmail.split("@")[0]}`,
-      role: data.memberRole || "member",
+      userId: `usr_${inv.email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "_")}`,
+      role: inv.role,
       joinedAt: now,
       createdAt: now,
     };
     workspaceMembersState = [...workspaceMembersState, inviteMember];
 
-    // Audit log for member invitation
     const inviteLog: AuditLogEntity = {
-      id: `log_${Date.now().toString(36)}_inv`,
+      id: `log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
       actorId: userState.id,
       actorName: `${userState.firstName || "Vishal"} ${userState.lastName || "Sharma"}`,
       action: "MEMBER_INVITED",
-      target: data.initialMemberEmail,
+      target: inv.email,
       details: {
         workspaceId: newWorkspace.id,
-        role: data.memberRole || "member",
+        role: inv.role,
       },
       createdAt: now,
     };
@@ -336,6 +343,91 @@ export async function createDraftEndpoint(
     success: true,
     message: "Draft created successfully.",
     data: newDraft,
+  };
+}
+
+/**
+ * Update draft title
+ */
+export async function updateDraftTitleEndpoint(
+  draftId: string,
+  newTitle: string
+): Promise<DraftDetailResponse> {
+  await new Promise((r) => setTimeout(r, 60));
+  const trimmed = newTitle.trim();
+  if (!trimmed) {
+    return { success: false, error: "Title cannot be empty." };
+  }
+
+  const index = draftsState.findIndex((d) => d.id === draftId);
+  if (index === -1) {
+    return { success: false, error: `Draft "${draftId}" not found.` };
+  }
+
+  const updated: DraftEntity = {
+    ...draftsState[index],
+    title: trimmed,
+    updatedAt: new Date().toISOString(),
+  };
+
+  draftsState = [
+    ...draftsState.slice(0, index),
+    updated,
+    ...draftsState.slice(index + 1),
+  ];
+
+  return {
+    success: true,
+    message: "Draft title updated.",
+    data: updated,
+  };
+}
+
+/**
+ * Toggle favorite (pinned) status for a draft
+ */
+export async function toggleDraftFavoriteEndpoint(
+  draftId: string
+): Promise<DraftDetailResponse> {
+  await new Promise((r) => setTimeout(r, 60));
+  const index = draftsState.findIndex((d) => d.id === draftId);
+  if (index === -1) {
+    return { success: false, error: `Draft "${draftId}" not found.` };
+  }
+
+  const updated: DraftEntity = {
+    ...draftsState[index],
+    isPinned: !draftsState[index].isPinned,
+    updatedAt: new Date().toISOString(),
+  };
+
+  draftsState = [
+    ...draftsState.slice(0, index),
+    updated,
+    ...draftsState.slice(index + 1),
+  ];
+
+  return {
+    success: true,
+    message: updated.isPinned ? "Added to favorites." : "Removed from favorites.",
+    data: updated,
+  };
+}
+
+/**
+ * Delete a draft session and its message history
+ */
+export async function deleteDraftEndpoint(
+  draftId: string
+): Promise<ApiResponse<{ id: string }>> {
+  await new Promise((r) => setTimeout(r, 80));
+  draftsState = draftsState.filter((d) => d.id !== draftId);
+  draftMessagesState = draftMessagesState.filter((m) => m.draftId !== draftId);
+
+  return {
+    success: true,
+    message: "Draft deleted successfully.",
+    data: { id: draftId },
   };
 }
 

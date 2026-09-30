@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { FolderGit2, Plus, Search, Star, GitBranch, Terminal, ExternalLink, Layers } from "lucide-react";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
+import { useSidebar, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input";
 
 export function ProjectsBodyView() {
   const { projects, activeWorkspace, createNewChat } = useWorkspace();
+  const { open } = useSidebar();
   const [search, setSearch] = useState("");
 
   const filteredProjects = projects.filter(
@@ -24,6 +26,9 @@ export function ProjectsBodyView() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
         <div>
           <div className="flex items-center gap-2">
+            {!open && (
+              <SidebarTrigger className="mr-1 text-muted-foreground hover:text-foreground cursor-pointer shrink-0" />
+            )}
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Projects</h1>
             <Badge variant="outline" className="text-xs font-mono">
               {projects.length} Total
@@ -36,17 +41,17 @@ export function ProjectsBodyView() {
 
         <div className="flex items-center gap-2.5">
           <div className="relative w-48 sm:w-64">
-            <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search projects..."
-              className="pl-8 h-8 text-xs bg-muted/40"
+              className="pl-9 h-9.5 text-xs bg-muted/40"
             />
           </div>
 
-          <Button size="sm" onClick={createNewChat} className="gap-1.5 shrink-0">
-            <Plus className="size-3.5" />
+          <Button size="default" onClick={createNewChat} className="gap-2 shrink-0 cursor-pointer font-semibold shadow-xs">
+            <Plus className="size-4" />
             <span>New Project</span>
           </Button>
         </div>

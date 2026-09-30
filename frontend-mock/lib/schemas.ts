@@ -67,6 +67,16 @@ export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 // ============================================================================
 
 /**
+ * Invited Member Schema
+ */
+export const invitedMemberSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  role: z.enum(["admin", "member", "viewer"]),
+});
+
+export type InvitedMember = z.infer<typeof invitedMemberSchema>;
+
+/**
  * Create Workspace Form Validation Schema
  */
 export const createWorkspaceSchema = z.object({
@@ -82,12 +92,13 @@ export const createWorkspaceSchema = z.object({
       /^[a-z0-9-]+$/,
       "Slug must only contain lowercase letters, numbers, and hyphens"
     ),
+  invitedMembers: z.array(invitedMemberSchema),
   initialMemberEmail: z
     .string()
     .email("Please enter a valid email address")
     .optional()
     .or(z.literal("")),
-  memberRole: z.enum(["admin", "member", "viewer"]),
+  memberRole: z.enum(["admin", "member", "viewer"]).optional(),
 });
 
 export type CreateWorkspaceFormValues = z.infer<typeof createWorkspaceSchema>;

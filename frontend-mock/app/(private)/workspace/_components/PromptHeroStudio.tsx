@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sparkles, ArrowRight, Paperclip, Terminal, Layers, Database, Shield } from "lucide-react";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
+import { useSidebar, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -13,6 +14,7 @@ export function PromptHeroStudio() {
     workspaceCreationAlert,
     dismissWorkspaceCreationAlert,
   } = useWorkspace();
+  const { open } = useSidebar();
   const [prompt, setPrompt] = useState("");
   const [model, setModel] = useState("Claude 3.7 Sonnet");
   const [framework, setFramework] = useState<"nextjs" | "vite" | "fastify" | "remix">("nextjs");
@@ -55,7 +57,13 @@ export function PromptHeroStudio() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full">
+    <div className="flex-1 flex flex-col items-center justify-center p-6 max-w-4xl mx-auto w-full relative">
+      {!open && (
+        <div className="fixed top-3 left-3 z-30 animate-in fade-in duration-200">
+          <SidebarTrigger className="size-8 rounded-lg bg-card/90 backdrop-blur border border-border shadow-xs hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center" />
+        </div>
+      )}
+
       {/* Workspace Creation Confirmation Alert Banner */}
       {workspaceCreationAlert && (
         <div className="w-full mb-6 p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 flex items-center justify-between gap-3 shadow-xs animate-in fade-in slide-in-from-top-2 duration-300">
@@ -148,11 +156,11 @@ export function PromptHeroStudio() {
             <Button
               onClick={() => handleSubmit()}
               disabled={!prompt.trim() || isSubmitting}
-              size="sm"
-              className="gap-1.5"
+              size="default"
+              className="gap-2 cursor-pointer font-semibold shadow-xs"
             >
               <span>{isSubmitting ? "Spinning Sandbox..." : "Build"}</span>
-              <ArrowRight className="size-3.5" />
+              <ArrowRight className="size-4" />
             </Button>
           </div>
         </div>

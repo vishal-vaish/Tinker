@@ -19,6 +19,9 @@ import {
   createWorkspaceEndpoint,
   toggleUserRoleEndpoint,
   updateUserPlanEndpoint,
+  updateDraftTitleEndpoint,
+  toggleDraftFavoriteEndpoint,
+  deleteDraftEndpoint,
 } from "@/action/workspace";
 
 interface WorkspaceContextType {
@@ -48,6 +51,9 @@ interface WorkspaceContextType {
     prompt: string,
     framework?: "nextjs" | "vite" | "fastify" | "remix"
   ) => Promise<DraftEntity | null>;
+  updateDraftTitle: (draftId: string, newTitle: string) => Promise<boolean>;
+  toggleDraftFavorite: (draftId: string) => Promise<boolean>;
+  deleteDraft: (draftId: string) => Promise<boolean>;
   role: "admin" | "user";
   toggleRole: () => void;
   isLoading: boolean;
@@ -197,6 +203,43 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
 
+  const updateDraftTitle = async (
+    draftId: string,
+    newTitle: string
+  ): Promise<boolean> => {
+    const res = await updateDraftTitleEndpoint(draftId, newTitle);
+    if (res.success && res.data) {
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === draftId ? res.data! : d))
+      );
+      return true;
+    }
+    return false;
+  };
+
+  const toggleDraftFavorite = async (draftId: string): Promise<boolean> => {
+    const res = await toggleDraftFavoriteEndpoint(draftId);
+    if (res.success && res.data) {
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === draftId ? res.data! : d))
+      );
+      return true;
+    }
+    return false;
+  };
+
+  const deleteDraft = async (draftId: string): Promise<boolean> => {
+    const res = await deleteDraftEndpoint(draftId);
+    if (res.success) {
+      setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+      if (activeDraftId === draftId) {
+        selectDraft(null);
+      }
+      return true;
+    }
+    return false;
+  };
+
   const userPlan: "free" | "pro" = user?.plan || "pro";
   const maxWorkspaces = userPlan === "pro" ? 5 : 1;
   const canCreateWorkspace = workspaces.length < maxWorkspaces;
@@ -219,9 +262,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         ? {
             name: input,
             slug: input.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            invitedMembers: [],
             memberRole: "member",
           }
-        : input;
+        : {
+            ...input,
+            invitedMembers: input.invitedMembers || [],
+          };
 
     const res = await createWorkspaceEndpoint(payload);
     if (res.success && res.data) {
@@ -278,6 +325,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         selectDraft,
         createNewChat,
         createNewDraft,
+        updateDraftTitle,
+        toggleDraftFavorite,
+        deleteDraft,
         role,
         toggleRole,
         isLoading,

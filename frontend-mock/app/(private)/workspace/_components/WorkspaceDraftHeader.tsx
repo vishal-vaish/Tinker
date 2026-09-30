@@ -1,19 +1,24 @@
 "use client";
 
 import { useWorkspace } from "@/providers/WorkspaceProvider";
+import { useSidebar, SidebarTrigger } from "@/components/ui/sidebar";
 import { ArrowLeft, Share2, Download, Terminal, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export function WorkspaceDraftHeader() {
   const { activeWorkspace, activeDraft, selectDraft, role } = useWorkspace();
+  const { open } = useSidebar();
 
   if (!activeDraft) return null;
 
   return (
     <header className="h-14 border-b border-border bg-card/60 backdrop-blur-md px-4 flex items-center justify-between shrink-0 select-none">
       {/* Left: Return trigger & Breadcrumbs */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0">
+        {!open && (
+          <SidebarTrigger className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0" />
+        )}
         <Button
           variant="ghost"
           size="icon-xs"
@@ -58,13 +63,13 @@ export function WorkspaceDraftHeader() {
           {role} mode
         </Badge>
 
-        <div className="flex items-center gap-1.5">
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-            <Share2 className="size-3.5" />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="default" className="gap-2 cursor-pointer font-medium">
+            <Share2 className="size-4" />
             <span className="hidden sm:inline">Share</span>
           </Button>
-          <Button size="sm" className="gap-1.5 text-xs">
-            <Download className="size-3.5" />
+          <Button size="default" className="gap-2 cursor-pointer font-semibold shadow-xs">
+            <Download className="size-4" />
             <span>Export</span>
           </Button>
         </div>
