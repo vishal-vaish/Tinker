@@ -4,7 +4,7 @@
 > - **Frontend**: Next.js (`frontend-mock/lib/types.ts`)
 > - **Backend API**: Python FastAPI (`app/models/`, `app/schemas/`)
 > - **Agent Engine**: Autonomous Loop (`agentic/agent/`)
-> - **Physical Storage**: File System Workspaces (`workspaces/`)
+> - **Physical Storage**: File System Sandboxes (`sandboxes/`)
 
 ---
 
@@ -120,7 +120,7 @@ erDiagram
         string status "'active' | 'ready' | 'building' | 'archived'"
         string visibility "'private' | 'public'"
         string branch "default: main"
-        string disk_path "workspaces/projects/<id>"
+        string disk_path "sandboxes/projects/<id>"
         boolean is_pinned
         int stars_count
         string created_by FK "users.id"
@@ -138,7 +138,7 @@ erDiagram
         string framework "'nextjs' | 'vite' | 'fastify' | 'remix' | 'python'"
         string model_used
         string status "'idle' | 'generating' | 'ready' | 'error'"
-        string disk_path "workspaces/drafts/<id>"
+        string disk_path "sandboxes/drafts/<id>"
         boolean is_pinned
         int prompts_count
         string preview_url
@@ -172,7 +172,7 @@ erDiagram
         int tokens_out
         text tests_before
         text tests_after
-        string run_dir "workspaces/runs/projects/<id>/<run_id>"
+        string run_dir "sandboxes/runs/projects/<id>/<run_id>"
         string diff_path "artifacts/changes.diff"
         timestamp created_at
     }
@@ -244,7 +244,7 @@ This section details **what each table stores**, **what each field holds**, and 
   - `status`: Lifecycle state (`active`, `ready`, `building`, `archived`).
   - `visibility`: Access scope (`private` to workspace vs `public` preview link).
   - `branch`: Current active git branch (default: `'main'`).
-  - `disk_path`: Relative filesystem location (e.g. `workspaces/projects/proj_saas_analytics`). Passed to `PathJail`.
+  - `disk_path`: Relative filesystem location (e.g. `sandboxes/projects/proj_saas_analytics`). Passed to `PathJail`.
   - `is_pinned`: Boolean flag to pin favorite projects to the top of the sidebar.
   - `stars_count`: Social / bookmark counter.
   - `created_by`: Foreign key to `users.id`.
@@ -263,7 +263,7 @@ This section details **what each table stores**, **what each field holds**, and 
   - `framework`: The single target framework stack.
   - `model_used`: Name of LLM model used (e.g. `'gemma4:latest'`, `'qwen3.5:9b'`).
   - `status`: Execution state (`idle`, `generating`, `ready`, `error`).
-  - `disk_path`: Relative disk location (e.g. `workspaces/drafts/draft_8f2a1b`).
+  - `disk_path`: Relative disk location (e.g. `sandboxes/drafts/draft_8f2a1b`).
   - `is_pinned`: Boolean flag to pin important drafts.
   - `prompts_count`: Number of user turns submitted in this thread.
   - `preview_url`: Internal or WebContainer URL for live iframe rendering.
@@ -299,7 +299,7 @@ This section details **what each table stores**, **what each field holds**, and 
   - `tokens_out`: Total completion tokens generated.
   - `tests_before`: Summary of baseline test execution before any file edits were made.
   - `tests_after`: Summary of test execution after final edits.
-  - `run_dir`: Physical path to run folder (e.g. `workspaces/runs/projects/proj_01/run_001/`). Contains `events.jsonl` and `snapshot/`.
+  - `run_dir`: Physical path to run folder (e.g. `sandboxes/runs/projects/proj_01/run_001/`). Contains `events.jsonl` and `snapshot/`.
   - `diff_path`: Physical path to `artifacts/changes.diff`.
   - `created_at`: Timestamp when run finished.
 
@@ -379,8 +379,8 @@ This section explains **every enum value in the system**, **what it means**, and
 ### 5.10 `agent_runs.target_type`
 | Enum Value | Meaning | Storage Path & Scope |
 |---|---|---|
-| `'project'` | Multi-File Repo | Operates in `workspaces/projects/<id>/` with full test suites. |
-| `'draft'` | Lightweight Canvas | Operates in `workspaces/drafts/<id>/` on focused single-concept files. |
+| `'project'` | Multi-File Repo | Operates in `sandboxes/projects/<id>/` with full test suites. |
+| `'draft'` | Lightweight Canvas | Operates in `sandboxes/drafts/<id>/` on focused single-concept files. |
 
 ### 5.11 `agent_runs.status`
 | Enum Value | Meaning | Exit Code & Badge |
@@ -555,7 +555,7 @@ CREATE INDEX IF NOT EXISTS idx_workspaces_owner ON workspaces(owner_id);
 
 ## 8. Multi-Tier End-to-End Operational Flow
 
-This diagram illustrates how data flows synchronously between the **Next.js UI**, **Python FastAPI Gateway**, **PostgreSQL**, **Agent Engine (`AgentLoop`)**, and the **Filesystem (`workspaces/`)**:
+This diagram illustrates how data flows synchronously between the **Next.js UI**, **Python FastAPI Gateway**, **PostgreSQL**, **Agent Engine (`AgentLoop`)**, and the **Filesystem (`sandboxes/`)**:
 
 ```mermaid
 sequenceDiagram
@@ -565,7 +565,7 @@ sequenceDiagram
     participant API as Python API (FastAPI)
     participant DB as PostgreSQL (8 Tables)
     participant Agent as AgentLoop (agentic/agent)
-    participant Disk as Physical Storage (workspaces/)
+    participant Disk as Physical Storage (sandboxes/)
 
     %% Step 1: Initial Prompt
     User->>UI: Types prompt in PromptHeroStudio: "Build SaaS Dashboard"
@@ -574,12 +574,12 @@ sequenceDiagram
     %% Step 2: DB & Folder Initialization
     API->>DB: INSERT INTO drafts (id, workspace_id, disk_path, status='generating', ...)
     API->>DB: INSERT INTO draft_messages (role='user', content=prompt)
-    API->>Disk: Create directory: workspaces/drafts/draft_01/
+    API->>Disk: Create directory: sandboxes/drafts/draft_01/
     API-->>UI: 201 Created { draftId: "draft_01" }
 
     %% Step 3: Spawn Agent Execution
-    API->>Agent: agent.run(task=prompt, project_root="workspaces/drafts/draft_01")
-    Agent->>Disk: Create run folder: workspaces/runs/drafts/draft_01/run_001/
+    API->>Agent: agent.run(task=prompt, project_root="sandboxes/drafts/draft_01")
+    Agent->>Disk: Create run folder: sandboxes/runs/drafts/draft_01/run_001/
     Agent->>Disk: Save pre-run snapshot: .../run_001/snapshot/
 
     %% Step 4: Live Event Streaming

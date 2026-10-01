@@ -18,6 +18,8 @@ import os
 import sys
 import signal
 import time
+import re
+import uuid
 from datetime import datetime
 
 # Configure stdout and stderr for UTF-8 on Windows consoles
@@ -50,11 +52,14 @@ def on_run_started(event: Event):
     p = event.payload
     print()
     print("╔══════════════════════════════════════════════════════════════╗")
-    print("║                    MINI CODING AGENT                       ║")
+    print("║                    MINI CODING AGENT                         ║")
     print("╚══════════════════════════════════════════════════════════════╝")
     print(f"  Run ID:   {event.run_id}")
     print(f"  Task:     {p.get('task', '')[:80]}")
-    print(f"  Project:  {p.get('project_root', '')}")
+    target_type = "Draft" if p.get('is_draft') else "Project"
+    print(f"  Target:   [{target_type}] {p.get('project_root', '')}")
+    if p.get('run_dir'):
+        print(f"  Trace:    {p.get('run_dir')}")
     print(f"  Model:    {p.get('config', {}).get('model_main', 'unknown')}")
     if p.get('stack'):
         print(f"  Stack:    {p.get('stack')}")
@@ -146,7 +151,8 @@ Examples:
   python main.py --project ./eval/tasks/small_feature --task "What tests are failing and why?"
         """
     )
-    parser.add_argument('--project', required=True, help='Path to the project directory')
+    parser.add_argument('--project', default=None, help='Project name in sandboxes/projects/ or directory path')
+    parser.add_argument('--draft', default=None, help='Draft name in sandboxes/drafts/ or directory path')
     parser.add_argument('--task', required=True, help='Task description for the agent')
     parser.add_argument('--stack', default='auto',
                         choices=['auto', 'python', 'html', 'react', 'vite', 'nextjs'],
@@ -155,11 +161,44 @@ Examples:
     
     args = parser.parse_args()
     
-    # Resolve paths
-    project_root = os.path.abspath(args.project)
-    if not os.path.isdir(project_root):
-        print(f"Error: Project directory not found: {project_root}", file=sys.stderr)
+    if not args.project and not args.draft:
+        print("Error: Either --project or --draft must be specified.", file=sys.stderr)
         sys.exit(1)
+    if args.project and args.draft:
+        print("Error: Cannot specify both --project and --draft simultaneously. Choose one target.", file=sys.stderr)
+        sys.exit(1)
+
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sandboxes_root = os.path.join(repo_root, 'sandboxes')
+
+    if args.draft:
+        is_draft = True
+        raw_target = args.draft.strip()
+
+        # 1. Direct path passed
+        if os.path.isdir(raw_target):
+            project_root = os.path.abspath(raw_target)
+        # 2. Existing draft ID passed to continue working in this thread
+        elif raw_target.startswith("draft_") and os.path.isdir(os.path.join(sandboxes_root, 'drafts', raw_target)):
+            project_root = os.path.join(sandboxes_root, 'drafts', raw_target)
+        else:
+            # 3. New draft requested with a slug/name: generate unique collision-free draft ID
+            clean_name = re.sub(r'[^a-zA-Z0-9_-]', '_', raw_target).strip('_') or 'canvas'
+            unique_id = uuid.uuid4().hex[:6]
+            draft_folder_name = f"draft_{clean_name}_{unique_id}"
+            sandbox_draft = os.path.join(sandboxes_root, 'drafts', draft_folder_name)
+            os.makedirs(sandbox_draft, exist_ok=True)
+            project_root = sandbox_draft
+    else:
+        is_draft = False
+        raw_target = args.project
+        if os.path.isdir(raw_target):
+            project_root = os.path.abspath(raw_target)
+        else:
+            sandbox_proj = os.path.join(sandboxes_root, 'projects', raw_target)
+            if not os.path.isdir(sandbox_proj):
+                os.makedirs(sandbox_proj, exist_ok=True)
+            project_root = sandbox_proj
     
     # Find config
     if args.config:
@@ -202,7 +241,12 @@ Examples:
     
     # Run the agent
     try:
-        summary = agent.run(task=args.task, project_root=project_root, requested_stack=args.stack)
+        summary = agent.run(
+            task=args.task,
+            project_root=project_root,
+            requested_stack=args.stack,
+            is_draft=is_draft,
+        )
     except StackValidationError as e:
         print(f"\n  ❌ Stack Verification Failed:\n     {e}\n", file=sys.stderr)
         sys.exit(1)

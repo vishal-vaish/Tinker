@@ -122,12 +122,29 @@ def detect_all_matching_stacks(project_root: str) -> list[StackProfile]:
     return list(detected.values())
 
 
-def detect_single_primary_stack(project_root: str) -> StackProfile:
+def detect_single_primary_stack(
+    project_root: str,
+    task: str = "",
+    default_stack: str = "nextjs"
+) -> StackProfile:
     """
     Selects strictly ONE primary stack based on standard project priority:
     Next.js > Vite > React > Python > HTML.
+    Fallback when no markers are detected: dynamically resolved from config.toml default_stack.
     """
     all_matching = {p.name: p for p in detect_all_matching_stacks(project_root)}
+
+    # If task explicitly specifies a stack, honor it
+    if task:
+        t = task.lower()
+        if any(k in t for k in ["python", "pytest", "unittest", "django", "fastapi", "flask"]) or ".py" in t:
+            return PYTHON_PROFILE
+        if any(k in t for k in ["vanilla html", "plain html", "single html", "raw html"]):
+            return HTML_PROFILE
+        if "vite" in t:
+            return VITE_PROFILE
+        if "next" in t or "nextjs" in t or "react" in t:
+            return NEXTJS_PROFILE
 
     # Hierarchy: Choose the most specific framework
     if "nextjs" in all_matching:
@@ -138,16 +155,19 @@ def detect_single_primary_stack(project_root: str) -> StackProfile:
         return REACT_PROFILE
     if "python" in all_matching:
         return PYTHON_PROFILE
-    if "html" in all_matching:
+    if "html" in all_matching and (default_stack == "html" or "html" in task.lower()):
         return HTML_PROFILE
 
-    # Default fallback
-    return PYTHON_PROFILE
+    # Config-driven fallback (defaults to Next.js TypeScript)
+    fallback_profile = get_stack_profile(default_stack)
+    return fallback_profile or NEXTJS_PROFILE
 
 
 def validate_and_resolve_stack(
     project_root: str,
-    requested_stack: str = "auto"
+    requested_stack: str = "auto",
+    task: str = "",
+    default_stack: str = "nextjs"
 ) -> tuple[bool, str, Optional[ResolvedProjectStack]]:
     """
     Validates that strictly ONE stack is requested, verifies it against project markers,
@@ -156,6 +176,8 @@ def validate_and_resolve_stack(
     Args:
         project_root: Absolute path to target project directory
         requested_stack: 'auto', or a single stack name: 'python', 'html', 'react', 'vite', 'nextjs'
+        task: Optional task description to aid auto-detection on brand new empty folders
+        default_stack: Fallback stack from config.toml (e.g. 'nextjs')
         
     Returns:
         (is_valid, error_or_info_message, resolved_stack)
@@ -171,8 +193,8 @@ def validate_and_resolve_stack(
         ), None
 
     if req in ("", "auto", "default"):
-        # Auto-detect strictly one primary stack
-        chosen_profile = detect_single_primary_stack(project_root)
+        # Auto-detect strictly one primary stack with config-driven fallback
+        chosen_profile = detect_single_primary_stack(project_root, task=task, default_stack=default_stack)
     else:
         # User specified a single stack
         profile = get_stack_profile(req)

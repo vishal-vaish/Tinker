@@ -37,3 +37,8 @@ approval_timeout = 60
 best_of_n = 1
 final_verification = true
 no_progress_threshold = 3
+
+[stacks]
+# Fallback framework stack when no markers are detected: "nextjs", "vite", "python", "html"
+default_stack = "nextjs"
+

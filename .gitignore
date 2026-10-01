@@ -38,6 +38,7 @@ venv.bak/
 # Agent runtime outputs
 runs/
 agentic/runs/
+sandboxes/runs/
 data/*.db
 data/*.sqlite3
 data/*.sqlite

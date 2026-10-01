@@ -27,7 +27,7 @@ Agentic service:     Agent loop | Context manager | Tool registry | Permission g
        ▼                  ▼                  ▼
   Model runtime       Sandbox           Storage
   (Ollama now,     (path jail +       (PostgreSQL +
-   online later)   command allowlist   workspaces/ traces)
+   online later)   command allowlist   sandboxes/ traces)
                    + project folder)
 ```
 
@@ -37,7 +37,7 @@ flowchart TD
     API["Backend Gateway (FastAPI / Server)"]
     DB[("PostgreSQL Database (8 Tables)")]
     Agent["Agentic Engine (agentic/agent)"]
-    Disk["Physical Storage (workspaces/)"]
+    Disk["Physical Storage (sandboxes/)"]
 
     UI <-->|"REST & SSE Events"| API
     API <-->|"SQL Queries & Commits"| DB
@@ -67,7 +67,7 @@ Everything runs on one machine, in one Python process at first.
 
 - Language: Python.
 - Model runtime: Ollama over its local HTTP API. Model names come only from the config file. Model capabilities (tool calling, vision, context length) are NOT assumed; the tool layer must be robust to weak or malformed tool calls.
-- Storage: PostgreSQL for durable multi-tenant data, projects/drafts metadata, chat history, and indexed run catalog (see `docs/DATABASE_SCHEMA.md`); plain files in external `workspaces/` for per-run traces, snapshots, and diffs (SQLite retained only for standalone offline evaluation benchmark).
+- Storage: PostgreSQL for durable multi-tenant data, projects/drafts metadata, chat history, and indexed run catalog (see `docs/DATABASE_SCHEMA.md`); plain files in external `sandboxes/` for per-run traces, snapshots, and diffs (SQLite retained only for standalone offline evaluation benchmark).
 - Backend (built later): a small Python web framework exposing REST plus a server-sent-event stream.
 - Frontend (built later): a simple web app.
 - Test runner for sample projects: Python standard library `unittest`, to avoid extra dependencies.
@@ -152,7 +152,7 @@ Also: stop if N consecutive test runs show no improvement in the number of faili
 ## 4.8 Tracing and run isolation
 
 ```text
-workspaces/
+sandboxes/
 ├── projects/<project_id>/            # Clean multi-file codebase
 ├── drafts/<draft_id>/                # Ephemeral single-concept canvas
 └── runs/                             # Scoped execution traces
@@ -197,7 +197,7 @@ Every event carries: event id, run id, timestamp, type, payload.
 
 A thin layer with no agent logic, backed by PostgreSQL adhering strictly to `docs/DATABASE_SCHEMA.md`:
 
-- start a run (accepts `task.submit`, provisions folder in `workspaces/`)
+- start a run (accepts `task.submit`, provisions folder in `sandboxes/`)
 - stream events for a run (server-sent events)
 - answer an approval
 - cancel a run

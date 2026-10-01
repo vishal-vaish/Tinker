@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 import shutil
+import time
 
 # Add parent to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -279,6 +280,77 @@ class TestStacks(unittest.TestCase):
         self.assertTrue(is_valid)
         self.assertEqual(res.name, "python")
         self.assertIn("python", res.allowed_commands)
+
+    def test_empty_dir_defaults_to_nextjs_typescript(self):
+        from agent.stacks import validate_and_resolve_stack
+        # Empty folder with no files must default to Next.js TypeScript
+        is_valid, msg, res = validate_and_resolve_stack(self.temp_dir, requested_stack="auto")
+        self.assertTrue(is_valid)
+        self.assertEqual(res.name, "nextjs")
+        self.assertIn("npm", res.allowed_commands)
+        self.assertIn("next", res.allowed_commands)
+        self.assertIn(".tsx", res.file_extensions)
+
+
+class TestSandboxesRouting(unittest.TestCase):
+    def test_run_tracer_explicit_run_dir(self):
+        temp_dir = tempfile.mkdtemp()
+        try:
+            custom_dir = os.path.join(temp_dir, 'custom_run_123')
+            tracer = RunTracer('run_123', run_dir=custom_dir)
+            self.assertEqual(tracer.run_dir, custom_dir)
+            self.assertTrue(os.path.isdir(custom_dir))
+            self.assertTrue(os.path.isfile(tracer.plan_path))
+            self.assertTrue(os.path.isfile(tracer.timeline_path))
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def test_run_tracer_records_timeline_and_history(self):
+        temp_dir = tempfile.mkdtemp()
+        try:
+            target_dir = os.path.join(temp_dir, 'drafts', 'test_draft')
+            run_dir = os.path.join(target_dir, 'run_abc')
+            tracer = RunTracer('run_abc', run_dir=run_dir)
+
+            # Test timeline recording
+            tracer.record_event(Event(
+                event_id='e1', run_id='run_abc', timestamp=time.time(),
+                type='step.progress', payload={'description': 'Analyzing project'}
+            ))
+            self.assertTrue(os.path.isfile(tracer.timeline_path))
+            with open(tracer.timeline_path, 'r', encoding='utf-8') as f:
+                timeline_content = f.read()
+            self.assertIn('Analyzing project', timeline_content)
+
+            # Test REPORT.md writing
+            report_md = "# Run Report: test"
+            tracer.write_markdown_report(report_md)
+            self.assertTrue(os.path.isfile(tracer.report_path))
+
+            # Test RUNS.md ledger update
+            summary = {
+                'run_id': 'run_abc',
+                'task': 'Create login card',
+                'status': 'success',
+                'total_time_seconds': 3.5,
+                'files_modified': ['app/login.tsx'],
+                'started_at': '2026-10-01T14:00:00',
+            }
+            tracer.update_history_catalog(summary)
+            runs_md = os.path.join(target_dir, 'RUNS.md')
+            self.assertTrue(os.path.isfile(runs_md))
+            with open(runs_md, 'r', encoding='utf-8') as f:
+                runs_content = f.read()
+            self.assertIn('Execution History', runs_content)
+            self.assertIn('run_abc', runs_content)
+            self.assertIn('Create login card', runs_content)
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def test_agentic_runs_not_created(self):
+        agentic_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        agentic_runs = os.path.join(agentic_dir, 'runs')
+        self.assertFalse(os.path.exists(agentic_runs), "agentic/runs/ must not exist")
 
 
 if __name__ == '__main__':

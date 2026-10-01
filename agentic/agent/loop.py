@@ -38,7 +38,7 @@ from agent.safety.permissions import PermissionGate
 from agent.context import ContextManager
 from agent.plan import PlanManager
 from agent.tracing import RunTracer
-from agent.report import build_report, format_report_text
+from agent.report import build_report, format_report_text, build_markdown_report
 from agent.stacks import validate_and_resolve_stack, ResolvedProjectStack, StackValidationError
 
 
@@ -90,7 +90,14 @@ class AgentLoop:
         self._cancelled = True
         self.model.cancel()
 
-    def run(self, task: str, project_root: str, requested_stack: str = "auto") -> dict:
+    def run(
+        self,
+        task: str,
+        project_root: str,
+        requested_stack: str = "auto",
+        run_dir: str = None,
+        is_draft: bool = False,
+    ) -> dict:
         """
         Run the agent on a coding task.
 
@@ -98,6 +105,8 @@ class AgentLoop:
             task: What the agent should do
             project_root: Absolute path to the project directory
             requested_stack: 'auto', or stack name(s) e.g. 'react', 'nextjs', 'python,vite'
+            run_dir: Optional explicit path to run directory (overrides sandboxes routing)
+            is_draft: Flag indicating whether this target is an ephemeral draft
 
         Returns:
             Run summary dict
@@ -106,18 +115,61 @@ class AgentLoop:
         project_root = os.path.realpath(os.path.abspath(project_root))
 
         # ── Step 0: Validate and Resolve Framework Stack at Project Start ─────
-        is_valid, stack_msg, resolved_stack = validate_and_resolve_stack(project_root, requested_stack)
+        is_valid, stack_msg, resolved_stack = validate_and_resolve_stack(
+            project_root, requested_stack, task=task, default_stack=self.config.default_stack
+        )
         if not is_valid:
             raise StackValidationError(stack_msg)
 
         run_id = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid.uuid4().hex[:6]
 
-        # Base directory for runs
+        # Base directory for sandboxes and scoped runs
         agentic_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        runs_base = os.path.join(agentic_root, 'runs')
+        repo_root = os.path.dirname(agentic_root)
+        sandboxes_root = os.path.join(repo_root, 'sandboxes')
+
+        if run_dir:
+            scoped_run_dir = run_dir
+        else:
+            norm_project = os.path.normpath(project_root)
+            norm_sandboxes = os.path.normpath(sandboxes_root)
+            projects_dir = os.path.join(norm_sandboxes, 'projects')
+            drafts_dir = os.path.join(norm_sandboxes, 'drafts')
+            eval_dir = os.path.join(agentic_root, 'eval', 'tasks')
+
+            try:
+                rel_proj = os.path.relpath(norm_project, projects_dir)
+            except ValueError:
+                rel_proj = '..'
+
+            try:
+                rel_draft = os.path.relpath(norm_project, drafts_dir)
+            except ValueError:
+                rel_draft = '..'
+
+            try:
+                rel_eval = os.path.relpath(norm_project, eval_dir)
+            except ValueError:
+                rel_eval = '..'
+
+            if not rel_proj.startswith('..') and rel_proj != '.':
+                proj_id = rel_proj.split(os.sep)[0]
+                scoped_run_dir = os.path.join(sandboxes_root, 'runs', 'projects', proj_id, run_id)
+            elif not rel_draft.startswith('..') and rel_draft != '.':
+                draft_id = rel_draft.split(os.sep)[0]
+                scoped_run_dir = os.path.join(sandboxes_root, 'runs', 'drafts', draft_id, run_id)
+            elif not rel_eval.startswith('..') and rel_eval != '.':
+                task_id = rel_eval.split(os.sep)[0]
+                scoped_run_dir = os.path.join(sandboxes_root, 'runs', 'eval', task_id, run_id)
+            elif is_draft:
+                draft_name = os.path.basename(norm_project) or 'draft'
+                scoped_run_dir = os.path.join(sandboxes_root, 'runs', 'drafts', draft_name, run_id)
+            else:
+                proj_name = os.path.basename(norm_project) or 'project'
+                scoped_run_dir = os.path.join(sandboxes_root, 'runs', 'projects', proj_name, run_id)
 
         # Setup tracing
-        tracer = RunTracer(run_id, base_dir=runs_base)
+        tracer = RunTracer(run_id, run_dir=scoped_run_dir)
         self.emitter.set_run_id(run_id)
         self.emitter.subscribe(None, tracer.record_event)
 
@@ -159,6 +211,8 @@ class AgentLoop:
         self.emitter.emit(RUN_STARTED, {
             'task': task,
             'project_root': project_root,
+            'is_draft': is_draft,
+            'run_dir': tracer.run_dir,
             'stack': resolved_stack.summary(),
             'config': {
                 'max_steps': self.config.max_steps,
@@ -482,8 +536,23 @@ class AgentLoop:
         summary['tests_after'] = final_test_result.split('\n')[0]
         summary['files_modified'] = gate.files_modified
         summary['tests_modified'] = gate.has_modified_tests
+        summary['run_dir'] = tracer.run_dir
 
         tracer.write_summary(summary)
+
+        # Build and save human-readable REPORT.md and master RUNS.md catalog
+        diff_path = os.path.join(tracer.run_dir, 'artifacts', 'changes.diff')
+        diff_text = ""
+        if os.path.isfile(diff_path):
+            try:
+                with open(diff_path, 'r', encoding='utf-8', errors='replace') as f:
+                    diff_text = f.read()
+            except Exception:
+                diff_text = ""
+
+        report_md = build_markdown_report(summary, steps, diff_text=diff_text)
+        tracer.write_markdown_report(report_md)
+        tracer.update_history_catalog(summary)
 
         # Emit finished
         self.emitter.emit(RUN_FINISHED, {
@@ -502,14 +571,16 @@ class AgentLoop:
             shutil.rmtree(dst)
         shutil.copytree(
             src, dst,
-            ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.git'),
+            ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '.git', 'node_modules', '.next', 'dist', '.cache'),
         )
 
     def _generate_diff(self, original_dir: str, current_dir: str) -> str:
         """Generate a unified diff between the snapshot and current state."""
         diffs = []
-        for root, _, files in os.walk(current_dir):
-            if '__pycache__' in root or '.git' in root:
+        ignored_dirs = {'__pycache__', '.git', 'node_modules', '.next', 'dist', '.cache'}
+        for root, dirs, files in os.walk(current_dir):
+            dirs[:] = [d for d in dirs if d not in ignored_dirs]
+            if any(ignored in root for ignored in ignored_dirs):
                 continue
             for fname in files:
                 cur_file = os.path.join(root, fname)

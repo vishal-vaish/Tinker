@@ -88,3 +88,8 @@ class AgentConfig:
     @property
     def no_progress_threshold(self) -> int:
         return self._data['accuracy']['no_progress_threshold']
+
+    # Stack properties
+    @property
+    def default_stack(self) -> str:
+        return self._data.get('stacks', {}).get('default_stack', 'nextjs')

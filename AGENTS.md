@@ -19,7 +19,7 @@
 | 🏗️ **Architecture & Tiers** | `main.py`, `server.py`, API endpoints, event contracts | [**`docs/ARCHITECTURE_PROMPT.md`**](file:///e:/vishal/Tinker/docs/ARCHITECTURE_PROMPT.md) | 3-tier decoupling (UI ↔ Backend ↔ Agent), event-driven streaming contract, deterministic code before LLM. |
 | 🗄️ **Database & Models** | PostgreSQL migrations, Pydantic schemas, `lib/types.ts` | [**`docs/DATABASE_SCHEMA.md`**](file:///e:/vishal/Tinker/docs/DATABASE_SCHEMA.md) | Exactly 8 canonical tables, strict enum definitions, `snake_case` in DB vs `camelCase` in TS, no schema drift. |
 | 🤖 **Agentic Engine** | `agentic/agent/`, tools, safety jail, context manager | `agentic/agent/` & `config.toml` | `PathJail` confinement, command allowlists, test file protection, 8k context compression, model failover. |
-| 📁 **User Storage** | `workspaces/` (`projects/`, `drafts/`, `runs/`) | `docs/DATABASE_SCHEMA.md` (Sec 7) | Isolated project repos, lightweight draft canvases, scoped run traces (`runs/projects/<id>/`). |
+| 📁 **User Storage** | `sandboxes/` (`projects/`, `drafts/`, `runs/`) | `docs/DATABASE_SCHEMA.md` (Sec 7) | Isolated project repos, lightweight draft canvases, scoped run traces (`runs/projects/<id>/`). |
 
 ---
 

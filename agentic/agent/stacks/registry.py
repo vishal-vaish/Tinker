@@ -112,9 +112,9 @@ VITE_PROFILE = StackProfile(
 
 NEXTJS_PROFILE = StackProfile(
     name="nextjs",
-    display_name="Next.js (App / Pages Router)",
+    display_name="Next.js (TypeScript / App Router)",
     file_markers=[
-        "next.config.js", "next.config.mjs", "next.config.ts"
+        "next.config.js", "next.config.mjs", "next.config.ts", "tsconfig.json"
     ],
     package_dependencies=["next"],
     default_verify_cmd="npm run build",
@@ -128,7 +128,7 @@ NEXTJS_PROFILE = StackProfile(
     file_extensions=[
         ".ts", ".tsx", ".js", ".jsx", ".json", ".css", ".scss", ".mjs"
     ],
-    prompt_guidelines="""- Next.js Stack: Distinguish between Server Components (default in App Router) and Client Components ('use client').
+    prompt_guidelines="""- Next.js Stack (TypeScript): Strictly write type-safe TypeScript code (.tsx, .ts). Distinguish between Server Components (default in App Router) and Client Components ('use client').
 - Ensure TypeScript types match Next.js PageProps, LayoutProps, or API Route handler signatures.
 - Running 'npm run build' validates TypeScript types, ESLint rules, and route tree compilation."""
 )
