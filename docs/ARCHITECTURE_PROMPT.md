@@ -26,9 +26,24 @@ Agentic service:     Agent loop | Context manager | Tool registry | Permission g
        ┌──────────────────┼──────────────────┐
        ▼                  ▼                  ▼
   Model runtime       Sandbox           Storage
-  (Ollama now,     (path jail +       (SQLite + per-run
-   online later)   command allowlist   traces)
+  (Ollama now,     (path jail +       (PostgreSQL +
+   online later)   command allowlist   workspaces/ traces)
                    + project folder)
+```
+
+```mermaid
+flowchart TD
+    UI["Frontend (Next.js in frontend-mock)"]
+    API["Backend Gateway (FastAPI / Server)"]
+    DB[("PostgreSQL Database (8 Tables)")]
+    Agent["Agentic Engine (agentic/agent)"]
+    Disk["Physical Storage (workspaces/)"]
+
+    UI <-->|"REST & SSE Events"| API
+    API <-->|"SQL Queries & Commits"| DB
+    API -->|"1. Calls as a library\nagent.run(task, project_root)"| Agent
+    Agent -->|"2. Emits events\n(tool_call, run_finished)"| API
+    Agent <-->|"3. Edits files & runs tests\n(within PathJail)"| Disk
 ```
 
 Everything runs on one machine, in one Python process at first.
@@ -52,7 +67,7 @@ Everything runs on one machine, in one Python process at first.
 
 - Language: Python.
 - Model runtime: Ollama over its local HTTP API. Model names come only from the config file. Model capabilities (tool calling, vision, context length) are NOT assumed; the tool layer must be robust to weak or malformed tool calls.
-- Storage: SQLite for durable data, plain files for per-run traces.
+- Storage: PostgreSQL for durable multi-tenant data, projects/drafts metadata, chat history, and indexed run catalog (see `docs/DATABASE_SCHEMA.md`); plain files in external `workspaces/` for per-run traces, snapshots, and diffs (SQLite retained only for standalone offline evaluation benchmark).
 - Backend (built later): a small Python web framework exposing REST plus a server-sent-event stream.
 - Frontend (built later): a simple web app.
 - Test runner for sample projects: Python standard library `unittest`, to avoid extra dependencies.
@@ -137,15 +152,20 @@ Also: stop if N consecutive test runs show no improvement in the number of faili
 ## 4.8 Tracing and run isolation
 
 ```text
-runs/<run_id>/
-├── events.jsonl   # append-only, written during the run
-├── run.json       # summary written at the end
-├── plan.md        # scratchpad plan
-├── snapshot/      # or a git reference
-└── artifacts/     # diffs, test outputs, final report
+workspaces/
+├── projects/<project_id>/            # Clean multi-file codebase
+├── drafts/<draft_id>/                # Ephemeral single-concept canvas
+└── runs/                             # Scoped execution traces
+    ├── projects/<project_id>/<run_id>/
+    └── drafts/<draft_id>/<run_id>/
+        ├── events.jsonl              # append-only, written during the run
+        ├── run.json                  # summary written at the end
+        ├── plan.md                   # scratchpad plan
+        ├── snapshot/                 # pre-run baseline for rollback/diffing
+        └── artifacts/                # changes.diff, test outputs
 ```
 
-`events.jsonl` records per event: timestamp, step number, event type, model role and name, token counts, duration, and enough input and output to reconstruct the step. `run.json` summarizes task, config used, steps, tool counts, test results before and after, stop reason, total time, and final status. Runs never merge. Shared durable data (such as results across runs) lives in one SQLite database.
+`events.jsonl` records per event: timestamp, step number, event type, model role and name, token counts, duration, and enough input and output to reconstruct the step. `run.json` summarizes task, config used, steps, tool counts, test results before and after, stop reason, total time, and final status. Runs never merge. Shared durable data (entities, relationships, chat history, and run indexes across 50+ projects) lives in PostgreSQL (see `docs/DATABASE_SCHEMA.md`).
 
 ## 4.9 Final report
 
@@ -175,13 +195,13 @@ Every event carries: event id, run id, timestamp, type, payload.
 
 # 6. Backend API (built after the agent works)
 
-A thin layer with no agent logic:
+A thin layer with no agent logic, backed by PostgreSQL adhering strictly to `docs/DATABASE_SCHEMA.md`:
 
-- start a run (accepts `task.submit`)
+- start a run (accepts `task.submit`, provisions folder in `workspaces/`)
 - stream events for a run (server-sent events)
 - answer an approval
 - cancel a run
-- list runs and fetch a run's report and trace
+- list projects, drafts, and fetch run traces and diffs from `agent_runs` table
 
 Runs execute in a worker thread or subprocess so cancel works without freezing the API. The agentic service is imported as a Python library, not a separate server. A separation into its own process is a later, optional change made possible by the event contract.
 

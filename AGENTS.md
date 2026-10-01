@@ -1,33 +1,47 @@
-# Tinker Project & Agent Rules
+# Tinker Platform — Master Agent Index & Guardrails
 
-## 1. Component Architecture & Directory Rules
-- **Mock Data**: ALL mock data MUST be located under a dedicated mocked data file (`frontend-mock/lib/mock-data.ts`). Never inline mock arrays, statistics, testimonials, or simulated backend data directly inside UI components or page files.
-- **Validation Schemas (Zod)**: ALL form validation schemas MUST be defined in a centralized schema file (`lib/schemas.ts`). Never define inline Zod schemas or ad-hoc validation logic inside UI components, forms, or page files. Always export TypeScript types using `z.infer<typeof schema>`.
-- **Centralized Type Definitions (`lib/types.ts`)**: ALL TypeScript types and interfaces for API requests, API responses, and domain entities MUST be organized exclusively in `lib/types.ts`. Never declare ad-hoc request/response types or domain entity interfaces inline within UI components, action files, or page files. Shared models, payloads, and domain objects must always be imported from `@/lib/types`.
-- **Form Directory & Architecture**: ALL form components MUST be organized exclusively under the `components/forms/` directory.
-  - Distinct form flows MUST be separated into individual files (e.g., `components/forms/LoginForm.tsx` exclusively for Sign In, and `components/forms/SignUpForm.tsx` exclusively for Sign Up). Never bundle multiple distinct authentication flows or opposing form modes into a single monolithic file.
-  - Never inline raw forms or multi-field input logic directly inside page views or route layouts.
-- **Provider Directory & Architecture**: ALL application provider and context components (e.g., `AgentationProvider`, theme providers, auth providers, context providers) MUST be organized exclusively under the top-level `providers/` directory as a direct child of `frontend-mock` (`frontend-mock/providers/` or `@/providers/`). Strictly NEVER place providers inside `components/` (such as `components/global/` or `components/providers/`) or inside individual page files.
-- **Action & API Directory Architecture (`action/`)**: ALL API calls, remote backend requests, server actions, and mutation endpoints MUST be organized exclusively under the top-level `action/` directory as a direct child of `frontend-mock` (`frontend-mock/action/` or `@/action/`). Never invoke raw `fetch()` or inline API call logic directly inside UI components, forms, or page files. Forms and UI components must always import and call centralized action functions (e.g., `loginEndpoint`, `registerEndpoint`).
-- **Form Validation & State Management**: ALL forms MUST use `react-hook-form` with `zodResolver` imported from `@hookform/resolvers/zod` referencing the central schema from `@/lib/schemas`.
-- **Form Input Components (`CustomInput` & `Field` Primitives)**:
-  - Form inputs MUST utilize `CustomInput` from `@/components/global/CustomInput` which integrates `react-hook-form`'s `<Controller>`, shadcn `<Field>`, `<FieldLabel>`, `<FieldDescription>`, and `<FieldError>`.
-  - Every input MUST be paired with an associated `<FieldLabel>` matching the input `id`/`name`. Never render unassociated native `<label>` tags or naked `<input>` elements.
-- **shadcn/ui Component Usage & Zero Redundant `className` Overrides**:
-  - All UI primitives MUST use the installed shadcn/ui components in `components/ui/` (`Button`, `Card`, `Badge`, `Input`, `Field`, `Separator`, `Accordion`, etc.). Never reinvent native buttons or inputs when a shadcn/ui primitive exists.
-  - **No Manual `className` Overwrites on UI Components**: Rely strictly on the component's built-in variants, sizes, and tokens (e.g., `<Button variant="outline" size="lg">`). Strictly DO NOT write manual, repetitive inline `className` utility overrides on component tags (such as hardcoded colors, borders, custom padding, or custom heights) unless strictly required for macro page layout (e.g., `w-full`, `mt-4`, `grid`). Manually overwriting CSS on every UI tag defeats the purpose of having a component library and design system.
-- **Route-Specific Components**: Any component that belongs exclusively to a single page or route MUST be organized under a `_components/` directory inside that route (e.g., `app/_components/` for landing page sections, `app/login/_components/LoginView.tsx` for login container).
-- **Global Components**: All shared cross-cutting application components MUST be placed under `components/global/` (e.g., `components/global/Logo.tsx`, `components/global/CustomInput.tsx`, `components/global/ShinyText.tsx`).
+> 🔒 **STRICT FREEZE ON `docs/` AND `AGENTS.md`**:
+> **STRICTLY NO DIRECT MODIFICATIONS — NOT EVEN SLIGHT OR MINOR ONES — MAY BE MADE TO ANY FILE INSIDE `docs/` OR TO ANY `AGENTS.md` FILE.**
+> - Modifying code inside `agentic/` (e.g. `main.py`, `server.py`, `agent/`, `eval/`) and `frontend-mock/` is allowed.
+> - But if a task or flow requires modifying anything inside **`docs/`** or editing **`AGENTS.md`**:
+>   1. **STOP**: Do NOT touch the file.
+>   2. **EXPLAIN**: Clearly state to the user **what** needs to be changed and **why** it is necessary.
+>   3. **CONFIRM**: Wait for the user's explicit confirmation before writing or editing a single line.
+> Zero unconfirmed edits to `docs/` or `AGENTS.md`. This rule is absolute and strictly enforced.
 
-## 2. Production Realism Standards
-- **Zero Toy / Wireframe Artifacts**: Strictly NO "Screen 1 / Screen 2" demo bars, dummy wireframe headers, or quick login cheat bypasses.
-- **Authentic Production Quality**: Every screen must look, feel, and function like an enterprise production SaaS platform (e.g., Linear, Vercel, Supabase, Cursor).
-- **Pacing**: Develop one screen at a time with full craftsmanship.
+---
 
-## 3. Design System & Tokens
-- Strictly follow the Tailwind v4 OKLCH token configuration defined in `app/globals.css`.
-- **Contrasting "Colored" Elements (No Primary Palette Bleed)**: Whenever an element, badge, tag, status pill, or indicator is requested to be "colored", NEVER default to or use colors near the primary theme palette (which is cool blue/indigo in this app). Using primary blue causes the element to blend into the UI instead of looking distinctly "colored". Instead, always use distinctive, contrasting accent colors:
-  - **PRO / Paid / Premium Tiers**: Warm Amber / Gold / Orange (`bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold border-0 shadow-xs shadow-amber-500/20`).
-  - **FREE / Neutral Tiers**: Subtle outline or muted secondary (`variant="outline" text-muted-foreground border-border`).
-  - **Success / Active**: Emerald Green (`emerald-500`).
-  - **Highlight / Special**: Rose / Fuchsia (`rose-500` or `fuchsia-600`).
+## 1. Domain Governance Directory
+
+| Domain | Target Files / Directories | Canonical Rule Document | Core Mandate |
+|---|---|---|---|
+| 🎨 **Frontend & UI** | `frontend-mock/`, UI components, forms, pages | [**`docs/ui/UI_RULES.md`**](file:///e:/vishal/Tinker/docs/ui/UI_RULES.md) | Centralized schemas/types, shadcn primitives, zero manual className overrides, OKLCH tokens, no toy artifacts. |
+| 🏗️ **Architecture & Tiers** | `main.py`, `server.py`, API endpoints, event contracts | [**`docs/ARCHITECTURE_PROMPT.md`**](file:///e:/vishal/Tinker/docs/ARCHITECTURE_PROMPT.md) | 3-tier decoupling (UI ↔ Backend ↔ Agent), event-driven streaming contract, deterministic code before LLM. |
+| 🗄️ **Database & Models** | PostgreSQL migrations, Pydantic schemas, `lib/types.ts` | [**`docs/DATABASE_SCHEMA.md`**](file:///e:/vishal/Tinker/docs/DATABASE_SCHEMA.md) | Exactly 8 canonical tables, strict enum definitions, `snake_case` in DB vs `camelCase` in TS, no schema drift. |
+| 🤖 **Agentic Engine** | `agentic/agent/`, tools, safety jail, context manager | `agentic/agent/` & `config.toml` | `PathJail` confinement, command allowlists, test file protection, 8k context compression, model failover. |
+| 📁 **User Storage** | `workspaces/` (`projects/`, `drafts/`, `runs/`) | `docs/DATABASE_SCHEMA.md` (Sec 7) | Isolated project repos, lightweight draft canvases, scoped run traces (`runs/projects/<id>/`). |
+
+---
+
+## 2. Universal Non-Negotiable Invariants
+
+Regardless of which domain you are touching, these principles apply across the entire repository:
+
+1. **Strict Freeze on `docs/` and `AGENTS.md`**:
+   - Zero edits permitted inside `docs/` or to any `AGENTS.md` rule files without prior user notification and explicit confirmation.
+   - Code inside `agentic/` and `frontend-mock/` can be modified normally.
+   - Always present **what** needs to be changed and **why**, then wait for explicit confirmation before touching any document in `docs/` or editing `AGENTS.md`.
+2. **Check the Domain File First**:
+   - Editing forms, UI components, or styles? Read [**`docs/ui/UI_RULES.md`**](file:///e:/vishal/Tinker/docs/ui/UI_RULES.md).
+   - Editing API contracts, backend events, or tier boundaries? Read [**`docs/ARCHITECTURE_PROMPT.md`**](file:///e:/vishal/Tinker/docs/ARCHITECTURE_PROMPT.md).
+   - Adding/modifying fields, types, or database tables? Read [**`docs/DATABASE_SCHEMA.md`**](file:///e:/vishal/Tinker/docs/DATABASE_SCHEMA.md).
+3. **Zero Schema Drift**:
+   - Never declare ad-hoc types or inline interfaces. Frontend types in `frontend-mock/lib/types.ts`, Backend models, and database columns MUST match `docs/DATABASE_SCHEMA.md` 1:1.
+4. **Single-Stack Exclusivity**:
+   - Every project/draft executes strictly ONE framework (`nextjs`, `vite`, `fastify`, `remix`, or `python`). Never mix multiple frameworks in a single project directory.
+5. **Deterministic Code Outranks the LLM**:
+   - Path checking (`PathJail`), command allowlisting, context budget limits, and test results are enforced by deterministic Python/TypeScript code, never left to the model's discretion.
+6. **Authentic Production Realism**:
+   - Strictly NO toy wireframe bars, dummy bypass headers, or fake UI shortcuts. Every screen and feature must feel like an enterprise developer tool (Linear, Vercel, Supabase).
+7. **Test File Protection**:
+   - Test files are read-only by default. The agent is never permitted to modify tests to fake a passing run. Success is solely judged by clean, passing verification commands.

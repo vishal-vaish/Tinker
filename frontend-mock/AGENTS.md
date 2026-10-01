@@ -1,33 +1,36 @@
-# Tinker Project & Agent Rules
+# Frontend Agent Rules & Standards
 
-## 1. Component Architecture & Directory Rules
-- **Mock Data**: ALL mock data MUST be located under a dedicated mocked data file (`lib/mock-data.ts`). Never inline mock arrays, statistics, testimonials, or simulated backend data directly inside UI components or page files.
-- **Validation Schemas (Zod)**: ALL form validation schemas MUST be defined in a centralized schema file (`lib/schemas.ts`). Never define inline Zod schemas or ad-hoc validation logic inside UI components, forms, or page files. Always export TypeScript types using `z.infer<typeof schema>`.
-- **Centralized Type Definitions (`lib/types.ts`)**: ALL TypeScript types and interfaces for API requests, API responses, and domain entities MUST be organized exclusively in `lib/types.ts`. Never declare ad-hoc request/response types or domain entity interfaces inline within UI components, action files, or page files. Shared models, payloads, and domain objects must always be imported from `@/lib/types`.
-- **Form Directory & Architecture**: ALL form components MUST be organized exclusively under the `components/forms/` directory.
-  - Distinct form flows MUST be separated into individual files (e.g., `components/forms/LoginForm.tsx` exclusively for Sign In, and `components/forms/SignUpForm.tsx` exclusively for Sign Up). Never bundle multiple distinct authentication flows or opposing form modes into a single monolithic file.
-  - Never inline raw forms or multi-field input logic directly inside page views or route layouts.
-- **Provider Directory & Architecture**: ALL application provider and context components (e.g., `AgentationProvider`, theme providers, auth providers, context providers) MUST be organized exclusively under the top-level `providers/` directory as a direct child of `frontend-mock` (`frontend-mock/providers/` or `@/providers/`). Strictly NEVER place providers inside `components/` (such as `components/global/` or `components/providers/`) or inside individual page files.
-- **Action & API Directory Architecture (`action/`)**: ALL API calls, remote backend requests, server actions, and mutation endpoints MUST be organized exclusively under the top-level `action/` directory as a direct child of `frontend-mock` (`frontend-mock/action/` or `@/action/`). Never invoke raw `fetch()` or inline API call logic directly inside UI components, forms, or page files. Forms and UI components must always import and call centralized action functions (e.g., `loginEndpoint`, `registerEndpoint`).
-- **Form Validation & State Management**: ALL forms MUST use `react-hook-form` with `zodResolver` imported from `@hookform/resolvers/zod` referencing the central schema from `@/lib/schemas`.
-- **Form Input Components (`CustomInput` & `Field` Primitives)**:
-  - Form inputs MUST utilize `CustomInput` from `@/components/global/CustomInput` which integrates `react-hook-form`'s `<Controller>`, shadcn `<Field>`, `<FieldLabel>`, `<FieldDescription>`, and `<FieldError>`.
-  - Every input MUST be paired with an associated `<FieldLabel>` matching the input `id`/`name`. Never render unassociated native `<label>` tags or naked `<input>` elements.
-- **shadcn/ui Component Usage & Zero Redundant `className` Overrides**:
-  - All UI primitives MUST use the installed shadcn/ui components in `components/ui/` (`Button`, `Card`, `Badge`, `Input`, `Field`, `Separator`, `Accordion`, etc.). Never reinvent native buttons or inputs when a shadcn/ui primitive exists.
-  - **No Manual `className` Overwrites on UI Components**: Rely strictly on the component's built-in variants, sizes, and tokens (e.g., `<Button variant="outline" size="lg">`). Strictly DO NOT write manual, repetitive inline `className` utility overrides on component tags (such as hardcoded colors, borders, custom padding, or custom heights) unless strictly required for macro page layout (e.g., `w-full`, `mt-4`, `grid`). Manually overwriting CSS on every UI tag defeats the purpose of having a component library and design system.
-- **Route-Specific Components**: Any component that belongs exclusively to a single page or route MUST be organized under a `_components/` directory inside that route (e.g., `app/_components/` for landing page sections, `app/login/_components/LoginView.tsx` for login container).
-- **Global Components**: All shared cross-cutting application components MUST be placed under `components/global/` (e.g., `components/global/Logo.tsx`, `components/global/CustomInput.tsx`, `components/global/ShinyText.tsx`).
+> 🔒 **STRICT CODE & DOCS FREEZE (`docs/` and `AGENTS.md`)**:
+> **STRICTLY NO DIRECT MODIFICATIONS — NOT EVEN SLIGHT OR MINOR ONES — MAY BE MADE TO ANY FILE INSIDE `docs/` OR TO THIS `AGENTS.md` FILE.**
+> If any frontend task, feature, or flow requires modifying anything inside `docs/` or updating agent rules:
+> 1. **STOP**: Do NOT touch the file.
+> 2. **EXPLAIN**: Clearly state to the user **what** needs to be changed and **why** it is necessary.
+> 3. **CONFIRM**: Wait for the user's explicit confirmation before writing or editing a single line.
+> Zero unconfirmed edits to `docs/` or `AGENTS.md`. This rule is absolute and strictly enforced.
 
-## 2. Production Realism Standards
-- **Zero Toy / Wireframe Artifacts**: Strictly NO "Screen 1 / Screen 2" demo bars, dummy wireframe headers, or quick login cheat bypasses.
-- **Authentic Production Quality**: Every screen must look, feel, and function like an enterprise production SaaS platform (e.g., Linear, Vercel, Supabase, Cursor).
-- **Pacing**: Develop one screen at a time with full craftsmanship.
+---
 
-## 3. Design System & Tokens
-- Strictly follow the Tailwind v4 OKLCH token configuration defined in `app/globals.css`.
-- **Contrasting "Colored" Elements (No Primary Palette Bleed)**: Whenever an element, badge, tag, status pill, or indicator is requested to be "colored", NEVER default to or use colors near the primary theme palette (which is cool blue/indigo in this app). Using primary blue causes the element to blend into the UI instead of looking distinctly "colored". Instead, always use distinctive, contrasting accent colors:
-  - **PRO / Paid / Premium Tiers**: Warm Amber / Gold / Orange (`bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold border-0 shadow-xs shadow-amber-500/20`).
-  - **FREE / Neutral Tiers**: Subtle outline or muted secondary (`variant="outline" text-muted-foreground border-border`).
-  - **Success / Active**: Emerald Green (`emerald-500`).
-  - **Highlight / Special**: Rose / Fuchsia (`rose-500` or `fuchsia-600`).
+> **Canonical Document**: See [**`docs/ui/UI_RULES.md`**](../docs/ui/UI_RULES.md) for full detailed specifications.
+> **Database Types**: Must strictly match [**`docs/DATABASE_SCHEMA.md`**](../docs/DATABASE_SCHEMA.md) and [`lib/types.ts`](./lib/types.ts).
+
+## Essential Rules for Frontend Changes
+
+1. **Centralized Schemas & Types**:
+   - Validation schemas strictly in `lib/schemas.ts` using Zod.
+   - Domain models strictly in `lib/types.ts` imported from `@/lib/types`.
+   - Mock data strictly in `lib/mock-data.ts`.
+2. **Directory Placement**:
+   - Forms strictly under `components/forms/` (e.g. `LoginForm.tsx` vs `SignUpForm.tsx`).
+   - Providers strictly under top-level `providers/`. Never place providers in `components/`.
+   - API & mutation logic strictly under top-level `action/`. Never inline raw `fetch()` in components.
+   - Route-specific components under `app/<route>/_components/`.
+   - Global components under `components/global/`.
+3. **Inputs & UI Primitives**:
+   - Always use `CustomInput` from `@/components/global/CustomInput`.
+   - Every input must have an associated `<FieldLabel>`.
+   - Use shadcn/ui variants (`variant`, `size`). Strictly no manual, repetitive utility overrides on component tags.
+4. **Color Tokens (No Primary Bleed)**:
+   - Pro Tier: Amber/Orange gradient (`from-amber-500 to-orange-500`).
+   - Free Tier: Neutral outline (`variant="outline" text-muted-foreground`).
+   - Active/Success: Emerald (`emerald-500`).
+   - Highlights: Rose/Fuchsia (`rose-500`).
