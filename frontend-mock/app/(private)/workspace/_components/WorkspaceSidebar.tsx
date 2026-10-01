@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { WorkspaceSelect } from "./WorkspaceSelect";
 import { SidebarDraftItem } from "./SidebarDraftItem";
+import { SidebarProjectItem } from "./SidebarProjectItem";
 
 export function WorkspaceSidebar() {
   const router = useRouter();
@@ -49,6 +50,8 @@ export function WorkspaceSidebar() {
 
   const isProjectsRoute = pathname === "/workspace/projects";
   const favoriteDrafts = drafts.filter((d) => d.isPinned);
+  const favoriteProjects = projects.filter((p) => p.isPinned);
+  const totalFavorites = favoriteDrafts.length + favoriteProjects.length;
 
   return (
     <Sidebar variant="sidebar" collapsible="offcanvas" className="p-0">
@@ -90,8 +93,8 @@ export function WorkspaceSidebar() {
         {/* 4. Separator Line */}
         <SidebarSeparator className="my-2" />
 
-        {/* 5. FAVORITES Section (Rendered above Drafts when drafts are favorited) */}
-        {favoriteDrafts.length > 0 && (
+        {/* 5. FAVORITES Section (Rendered above Drafts when drafts or projects are favorited) */}
+        {totalFavorites > 0 && (
           <>
             <SidebarGroup className="p-0">
               <div className="flex items-center justify-between px-2 py-1">
@@ -103,7 +106,7 @@ export function WorkspaceSidebar() {
                   variant="outline"
                   className="text-[10px] font-mono px-1.5 py-0 h-4 text-amber-500 border-amber-500/30"
                 >
-                  {favoriteDrafts.length}
+                  {totalFavorites}
                 </Badge>
               </div>
 
@@ -114,7 +117,7 @@ export function WorkspaceSidebar() {
                       activeDraftId === draft.id && !isProjectsRoute;
                     return (
                       <SidebarDraftItem
-                        key={`fav-${draft.id}`}
+                        key={`fav-draft-${draft.id}`}
                         draft={draft}
                         isActive={isActive}
                         hideFavoriteIcon={true}
@@ -122,6 +125,15 @@ export function WorkspaceSidebar() {
                       />
                     );
                   })}
+                  {favoriteProjects.map((proj) => (
+                    <SidebarProjectItem
+                      key={`fav-proj-${proj.id}`}
+                      project={proj}
+                      isActive={false}
+                      hideFavoriteIcon={true}
+                      onSelect={() => router.push("/workspace/projects")}
+                    />
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -194,20 +206,12 @@ export function WorkspaceSidebar() {
             ) : (
               <SidebarMenu>
                 {projects.map((proj) => (
-                  <SidebarMenuItem key={proj.id}>
-                    <SidebarMenuButton
-                      onClick={() => router.push("/workspace/projects")}
-                      className="cursor-pointer flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <Layers className="size-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate text-muted-foreground hover:text-foreground">
-                          {proj.name}
-                        </span>
-                      </div>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <SidebarProjectItem
+                    key={proj.id}
+                    project={proj}
+                    isActive={false}
+                    onSelect={() => router.push("/workspace/projects")}
+                  />
                 ))}
               </SidebarMenu>
             )}

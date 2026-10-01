@@ -22,6 +22,9 @@ import {
   updateDraftTitleEndpoint,
   toggleDraftFavoriteEndpoint,
   deleteDraftEndpoint,
+  updateProjectNameEndpoint,
+  toggleProjectFavoriteEndpoint,
+  deleteProjectEndpoint,
 } from "@/action/workspace";
 
 interface WorkspaceContextType {
@@ -54,6 +57,9 @@ interface WorkspaceContextType {
   updateDraftTitle: (draftId: string, newTitle: string) => Promise<boolean>;
   toggleDraftFavorite: (draftId: string) => Promise<boolean>;
   deleteDraft: (draftId: string) => Promise<boolean>;
+  updateProjectName: (projectId: string, newName: string) => Promise<boolean>;
+  toggleProjectFavorite: (projectId: string) => Promise<boolean>;
+  deleteProject: (projectId: string) => Promise<boolean>;
   role: "admin" | "user";
   toggleRole: () => void;
   isLoading: boolean;
@@ -240,6 +246,40 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const updateProjectName = async (
+    projectId: string,
+    newName: string
+  ): Promise<boolean> => {
+    const res = await updateProjectNameEndpoint(projectId, newName);
+    if (res.success && res.data) {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === projectId ? res.data! : p))
+      );
+      return true;
+    }
+    return false;
+  };
+
+  const toggleProjectFavorite = async (projectId: string): Promise<boolean> => {
+    const res = await toggleProjectFavoriteEndpoint(projectId);
+    if (res.success && res.data) {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === projectId ? res.data! : p))
+      );
+      return true;
+    }
+    return false;
+  };
+
+  const deleteProject = async (projectId: string): Promise<boolean> => {
+    const res = await deleteProjectEndpoint(projectId);
+    if (res.success) {
+      setProjects((prev) => prev.filter((p) => p.id !== projectId));
+      return true;
+    }
+    return false;
+  };
+
   const userPlan: "free" | "pro" = user?.plan || "pro";
   const maxWorkspaces = userPlan === "pro" ? 5 : 1;
   const canCreateWorkspace = workspaces.length < maxWorkspaces;
@@ -328,6 +368,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         updateDraftTitle,
         toggleDraftFavorite,
         deleteDraft,
+        updateProjectName,
+        toggleProjectFavorite,
+        deleteProject,
         role,
         toggleRole,
         isLoading,

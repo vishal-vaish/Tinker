@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Star, Pencil, Trash2, MoreHorizontal } from "lucide-react";
-import type { DraftEntity } from "@/lib/types";
+import { Star, Pencil, Trash2, MoreHorizontal, Layers } from "lucide-react";
+import type { ProjectEntity } from "@/lib/types";
 import { useWorkspace } from "@/providers/WorkspaceProvider";
 import {
   SidebarMenuItem,
@@ -28,23 +28,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-interface SidebarDraftItemProps {
-  draft: DraftEntity;
+interface SidebarProjectItemProps {
+  project: ProjectEntity;
   isActive: boolean;
   onSelect: () => void;
   hideFavoriteIcon?: boolean;
 }
 
-export function SidebarDraftItem({
-  draft,
+export function SidebarProjectItem({
+  project,
   isActive,
   onSelect,
   hideFavoriteIcon = false,
-}: SidebarDraftItemProps) {
-  const { updateDraftTitle, toggleDraftFavorite, deleteDraft } = useWorkspace();
+}: SidebarProjectItemProps) {
+  const { updateProjectName, toggleProjectFavorite, deleteProject } = useWorkspace();
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
-  const [renameTitle, setRenameTitle] = useState(draft.title);
+  const [renameName, setRenameName] = useState(project.name);
   const [isRenaming, setIsRenaming] = useState(false);
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -52,14 +52,14 @@ export function SidebarDraftItem({
 
   const handleRenameSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!renameTitle.trim() || isRenaming) return;
+    if (!renameName.trim() || isRenaming) return;
 
     setIsRenaming(true);
     try {
-      await updateDraftTitle(draft.id, renameTitle.trim());
+      await updateProjectName(project.id, renameName.trim());
       setIsRenameOpen(false);
     } catch (err) {
-      console.error("Failed to rename draft:", err);
+      console.error("Failed to rename project:", err);
     } finally {
       setIsRenaming(false);
     }
@@ -67,19 +67,19 @@ export function SidebarDraftItem({
 
   const handleToggleFavorite = async () => {
     try {
-      await toggleDraftFavorite(draft.id);
+      await toggleProjectFavorite(project.id);
     } catch (err) {
-      console.error("Failed to toggle favorite:", err);
+      console.error("Failed to toggle project favorite:", err);
     }
   };
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteDraft(draft.id);
+      await deleteProject(project.id);
       setIsDeleteOpen(false);
     } catch (err) {
-      console.error("Failed to delete draft:", err);
+      console.error("Failed to delete project:", err);
     } finally {
       setIsDeleting(false);
     }
@@ -96,16 +96,18 @@ export function SidebarDraftItem({
             "group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground",
             "group-has-[[aria-expanded=true]]/menu-item:bg-sidebar-accent group-has-[[aria-expanded=true]]/menu-item:text-sidebar-accent-foreground"
           )}
-          title={draft.title}
+          title={project.name}
         >
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            {draft.isPinned && !hideFavoriteIcon && (
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Layers className="size-3.5 text-muted-foreground shrink-0" />
+            {project.isPinned && !hideFavoriteIcon && (
               <Star className="size-3 text-amber-500 fill-amber-500 shrink-0" />
             )}
             <span className="truncate font-medium text-foreground">
-              {draft.title}
+              {project.name}
             </span>
           </div>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
         </SidebarMenuButton>
 
         <DropdownMenu>
@@ -118,7 +120,7 @@ export function SidebarDraftItem({
             }
           >
             <MoreHorizontal className="size-3.5 transition-colors" />
-            <span className="sr-only">Draft actions</span>
+            <span className="sr-only">Project actions</span>
           </DropdownMenuTrigger>
 
           <DropdownMenuContent
@@ -131,7 +133,7 @@ export function SidebarDraftItem({
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                setRenameTitle(draft.title);
+                setRenameName(project.name);
                 setIsRenameOpen(true);
               }}
               className="cursor-pointer gap-2 text-xs"
@@ -150,13 +152,13 @@ export function SidebarDraftItem({
               <Star
                 className={cn(
                   "size-3.5",
-                  draft.isPinned
+                  project.isPinned
                     ? "text-amber-500 fill-amber-500"
                     : "text-muted-foreground"
                 )}
               />
               <span>
-                {draft.isPinned ? "Remove from favorite" : "Add to favorite"}
+                {project.isPinned ? "Remove from favorite" : "Add to favorite"}
               </span>
             </DropdownMenuItem>
 
@@ -170,7 +172,7 @@ export function SidebarDraftItem({
               className="cursor-pointer gap-2 text-xs text-destructive focus:text-destructive"
             >
               <Trash2 className="size-3.5" />
-              <span>Delete draft</span>
+              <span>Delete project</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -185,19 +187,19 @@ export function SidebarDraftItem({
                 <Pencil className="size-4" />
               </div>
               <DialogTitle className="text-base font-semibold text-foreground">
-                Edit Draft Title
+                Edit Project Name
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
-              Give this draft session a clear name to organize your workspace workflows.
+              Rename this project to organize your repositories and development environments.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleRenameSubmit} className="space-y-4 pt-1">
             <Input
-              value={renameTitle}
-              onChange={(e) => setRenameTitle(e.target.value)}
-              placeholder="Enter draft title..."
+              value={renameName}
+              onChange={(e) => setRenameName(e.target.value)}
+              placeholder="Enter project name..."
               autoFocus
               className="h-10 text-sm"
             />
@@ -214,7 +216,7 @@ export function SidebarDraftItem({
               <Button
                 type="submit"
                 size="default"
-                disabled={!renameTitle.trim() || isRenaming}
+                disabled={!renameName.trim() || isRenaming}
                 className="cursor-pointer font-semibold shadow-xs"
               >
                 {isRenaming ? "Saving..." : "Save changes"}
@@ -233,15 +235,15 @@ export function SidebarDraftItem({
                 <Trash2 className="size-4" />
               </div>
               <DialogTitle className="text-base font-semibold text-destructive">
-                Delete Draft Session
+                Delete Project
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
               Are you sure you want to delete{" "}
               <span className="font-semibold text-foreground">
-                "{draft.title}"
+                "{project.name}"
               </span>
-              ? This session history and its messages will be permanently removed.
+              ? This repository and its associated workspace environments will be permanently removed.
             </DialogDescription>
           </DialogHeader>
 
@@ -263,7 +265,7 @@ export function SidebarDraftItem({
               disabled={isDeleting}
               className="cursor-pointer font-semibold shadow-xs"
             >
-              {isDeleting ? "Deleting..." : "Delete draft"}
+              {isDeleting ? "Deleting..." : "Delete project"}
             </Button>
           </DialogFooter>
         </DialogContent>

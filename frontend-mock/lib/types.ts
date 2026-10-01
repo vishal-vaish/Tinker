@@ -76,6 +76,7 @@ export interface ProjectEntity {
   visibility: "private" | "public";
   branch?: string;
   starsCount?: number;
+  isPinned?: boolean;
   createdBy: string;
   updatedBy: string;
   createdAt: string;
@@ -245,6 +246,8 @@ export type LogoutResponse = ApiResponse<null>;
 export type WorkspacesResponse = ApiResponse<WorkspaceEntity[]>;
 
 export type ProjectsResponse = ApiResponse<ProjectEntity[]>;
+
+export type ProjectDetailResponse = ApiResponse<ProjectEntity>;
 
 export type DraftsResponse = ApiResponse<DraftEntity[]>;
 

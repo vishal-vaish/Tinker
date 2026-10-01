@@ -10,6 +10,7 @@ import type {
   WorkspacesResponse,
   WorkspaceMembersResponse,
   ProjectsResponse,
+  ProjectDetailResponse,
   DraftsResponse,
   DraftMessagesResponse,
   DraftDetailResponse,
@@ -428,6 +429,90 @@ export async function deleteDraftEndpoint(
     success: true,
     message: "Draft deleted successfully.",
     data: { id: draftId },
+  };
+}
+
+/**
+ * Update project name
+ */
+export async function updateProjectNameEndpoint(
+  projectId: string,
+  newName: string
+): Promise<ProjectDetailResponse> {
+  await new Promise((r) => setTimeout(r, 60));
+  const trimmed = newName.trim();
+  if (!trimmed) {
+    return { success: false, error: "Project name cannot be empty." };
+  }
+
+  const index = projectsState.findIndex((p) => p.id === projectId);
+  if (index === -1) {
+    return { success: false, error: `Project "${projectId}" not found.` };
+  }
+
+  const updated: ProjectEntity = {
+    ...projectsState[index],
+    name: trimmed,
+    updatedAt: new Date().toISOString(),
+  };
+
+  projectsState = [
+    ...projectsState.slice(0, index),
+    updated,
+    ...projectsState.slice(index + 1),
+  ];
+
+  return {
+    success: true,
+    message: "Project name updated.",
+    data: updated,
+  };
+}
+
+/**
+ * Toggle favorite (pinned) status for a project
+ */
+export async function toggleProjectFavoriteEndpoint(
+  projectId: string
+): Promise<ProjectDetailResponse> {
+  await new Promise((r) => setTimeout(r, 60));
+  const index = projectsState.findIndex((p) => p.id === projectId);
+  if (index === -1) {
+    return { success: false, error: `Project "${projectId}" not found.` };
+  }
+
+  const updated: ProjectEntity = {
+    ...projectsState[index],
+    isPinned: !projectsState[index].isPinned,
+    updatedAt: new Date().toISOString(),
+  };
+
+  projectsState = [
+    ...projectsState.slice(0, index),
+    updated,
+    ...projectsState.slice(index + 1),
+  ];
+
+  return {
+    success: true,
+    message: updated.isPinned ? "Added to favorites." : "Removed from favorites.",
+    data: updated,
+  };
+}
+
+/**
+ * Delete a project
+ */
+export async function deleteProjectEndpoint(
+  projectId: string
+): Promise<ApiResponse<{ id: string }>> {
+  await new Promise((r) => setTimeout(r, 80));
+  projectsState = projectsState.filter((p) => p.id !== projectId);
+
+  return {
+    success: true,
+    message: "Project deleted successfully.",
+    data: { id: projectId },
   };
 }
 
