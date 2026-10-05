@@ -7,11 +7,11 @@
 
 [models.main]
 provider = "ollama"
-model = "gemma4:latest"
-context_limit = 8192
+model = "qwen2.5-coder:14b"
+context_limit = 16384
 thinking = false
 temperature = 0.1
-timeout = 120
+timeout = 180
 
 [models.fallback]
 provider = "ollama"
@@ -40,5 +40,5 @@ no_progress_threshold = 3
 
 [stacks]
 # Fallback framework stack when no markers are detected: "nextjs", "vite", "python", "html"
-default_stack = "nextjs"
+default_stack = "html"
 

@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-zinc-950 text-zinc-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tinker — Agent Playground</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            zinc: {
+              925: '#121215',
+              950: '#09090b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased overflow-hidden select-none">
+
+  <!-- Top App Navigation Bar -->
+  <header class="h-14 border-b border-zinc-800 bg-zinc-900/60 backdrop-blur px-4 flex items-center justify-between shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-600/30">
+        <i data-lucide="sparkles" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <h1 class="text-sm font-semibold tracking-wide text-zinc-100 flex items-center gap-2">
+          Tinker Playground
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-mono">Live Runner</span>
+        </h1>
+      </div>
+    </div>
+
+    <!-- Mode Selector: Draft vs Project -->
+    <div class="flex items-center bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+      <button id="btn-mode-draft" onclick="switchMode('draft')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all bg-zinc-800 text-zinc-100 shadow-sm">
+        <i data-lucide="file-code-2" class="w-3.5 h-3.5 text-indigo-400"></i>
+        <span>Draft Canvas</span>
+      </button>
+      <button id="btn-mode-project" onclick="switchMode('project')" class="flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all text-zinc-400 hover:text-zinc-200">
+        <i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+        <span>Project Repo</span>
+      </button>
+    </div>
+
+    <!-- Right Controls: Existing Sandboxes Selector -->
+    <div class="flex items-center space-x-3 text-xs">
+      <!-- Active Model & Context Limit Badge -->
+      <span id="model-context-badge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-950/70 text-indigo-300 border border-indigo-800/50 font-mono text-[11px]">
+        <i data-lucide="cpu" class="w-3 h-3 text-indigo-400"></i>
+        <span id="badge-model-name">qwen2.5-coder:14b</span>
+        <span class="text-indigo-500">•</span>
+        <span id="badge-context-limit">16k context</span>
+      </span>
+
+      <div class="flex items-center gap-1.5">
+        <span class="text-[11px] text-zinc-400">Sandbox:</span>
+        <select id="sandbox-selector" onchange="loadSelectedSandbox(this.value)" class="bg-zinc-900 border border-zinc-800 rounded px-2.5 py-1 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 max-w-[200px] truncate">
+          <option value="">(Auto-create new sandbox)</option>
+        </select>
+        <button id="btn-delete-sandbox" onclick="deleteCurrentSandbox()" class="hidden p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-rose-400 transition-colors" title="Delete current sandbox from disk">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <button id="btn-new-sandbox" onclick="resetToNewSandbox()" class="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-medium transition-all shadow-sm shadow-indigo-600/30 cursor-pointer" title="Create or prepare a new sandbox">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        <span>New Sandbox</span>
+      </button>
+
+      <div class="h-4 w-px bg-zinc-800"></div>
+
+      <span id="connection-status" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 font-mono text-[11px]">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+        Ready
+      </span>
+    </div>
+  </header>
+
+  <!-- Main Split Layout -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT COLUMN: Chat & Prompt Interface -->
+    <section class="w-full md:w-[460px] lg:w-[500px] border-r border-zinc-800 flex flex-col bg-zinc-950 shrink-0">
+      
+      <!-- Mode Info Banner -->
+      <div id="mode-banner" class="px-4 py-2 bg-zinc-900/40 border-b border-zinc-800/60 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2 text-zinc-400">
+          <i id="mode-banner-icon" data-lucide="file-code-2" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span id="mode-banner-text">Target: <strong class="text-zinc-200">sandboxes/drafts/</strong></span>
+        </div>
+        <span id="mode-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-950 text-indigo-400 border border-indigo-800/40">DRAFT</span>
+      </div>
+
+      <!-- Messages Stream (Empty by default, populated dynamically) -->
+      <div id="message-stream" class="flex-1 overflow-y-auto p-4 space-y-4">
+        <!-- Clean Empty State -->
+        <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-500 space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
+            <i data-lucide="terminal" class="w-6 h-6"></i>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-semibold text-zinc-300">Ready for Agent Tasks</h3>
+            <p class="text-xs max-w-[280px] leading-relaxed text-zinc-500">
+              Enter any prompt below to run Tinker's live agentic engine. Real tool executions and output will stream here.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Chat Input Form -->
+      <div class="p-3 border-t border-zinc-800 bg-zinc-925/90">
+        <form id="chat-form" onsubmit="event.preventDefault(); handleSendMessage(event); return false;" class="space-y-2">
+          
+          <!-- Stack Tag & Controls -->
+          <div class="flex items-center justify-between text-xs px-1 text-zinc-400">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-zinc-500 font-medium">Stack:</span>
+              <select id="stack-select" class="bg-zinc-900 border border-zinc-800 rounded px-2 py-0.5 text-xs text-zinc-300 focus:outline-none focus:border-indigo-500">
+                <option value="html" selected>HTML + Tailwind CDN</option>
+                <option value="nextjs">Next.js (TypeScript / App Router)</option>
+              </select>
+            </div>
+            <span class="text-[11px] text-zinc-500 font-mono">Press Enter ↵</span>
+          </div>
+
+          <!-- Input Box -->
+          <div class="relative flex items-center">
+            <textarea
+              id="prompt-input"
+              rows="2"
+              placeholder="Describe the UI, component, or task to build..."
+              class="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 resize-none"
+              onkeydown="if(event.key === 'Enter' && !event.shiftKey){ event.preventDefault(); handleSendMessage(event); }"
+            ></textarea>
+            <button
+              type="button"
+              onclick="handleSendMessage(event)"
+              id="send-button"
+              class="absolute right-2.5 bottom-2.5 p-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-sm flex items-center justify-center"
+              title="Send prompt (Enter)"
+            >
+              <svg class="w-3.5 h-3.5 select-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Live Prototype Preview & Code -->
+    <section class="flex-1 flex flex-col bg-zinc-900/30 overflow-hidden">
+      
+      <!-- Top Preview Controls -->
+      <div class="h-11 border-b border-zinc-800 bg-zinc-950 px-4 flex items-center justify-between shrink-0">
+        
+        <!-- View Mode Tabs -->
+        <div class="flex items-center space-x-1">
+          <button id="tab-preview" onclick="switchViewTab('preview')" class="px-3 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-100 flex items-center gap-1.5">
+            <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
+            Live Preview
+          </button>
+          <button id="tab-code" onclick="switchViewTab('code')" class="px-3 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5">
+            <i data-lucide="code" class="w-3.5 h-3.5"></i>
+            Code Inspector
+          </button>
+          <button id="tab-context" onclick="switchViewTab('context')" class="px-3 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5">
+            <i data-lucide="gauge" class="w-3.5 h-3.5"></i>
+            Context & Trace
+          </button>
+        </div>
+
+        <!-- Responsive Device Emulation & Actions -->
+        <div class="flex items-center space-x-2">
+          <!-- Viewport Sizer -->
+          <div class="hidden sm:flex items-center bg-zinc-900 border border-zinc-800 rounded p-0.5 text-zinc-400">
+            <button onclick="setViewport('desktop')" id="vp-desktop" class="p-1 rounded bg-zinc-800 text-zinc-100" title="Desktop View">
+              <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="setViewport('tablet')" id="vp-tablet" class="p-1 rounded hover:text-zinc-100" title="Tablet View">
+              <i data-lucide="tablet" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="setViewport('mobile')" id="vp-mobile" class="p-1 rounded hover:text-zinc-100" title="Mobile View">
+              <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <div class="h-4 w-px bg-zinc-800"></div>
+
+          <!-- Open In Tab & Refresh -->
+          <a id="btn-open-external" href="#" target="_blank" class="p-1.5 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" title="Open in New Tab">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          </a>
+          <button onclick="reloadPreview()" class="p-1.5 rounded text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900" title="Reload Preview">
+            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview Viewport Frame Container -->
+      <div class="flex-1 flex items-center justify-center p-4 overflow-hidden bg-zinc-950/40">
+        
+        <!-- Live Preview Frame Wrapper -->
+        <div id="preview-wrapper" class="w-full h-full transition-all duration-200 rounded-xl border border-zinc-800 overflow-hidden shadow-2xl bg-zinc-950 flex flex-col">
+          
+          <!-- Mock Browser Address Bar -->
+          <div class="h-8 bg-zinc-900 border-b border-zinc-800 px-3 flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-1.5">
+              <div class="w-2.5 h-2.5 rounded-full bg-red-500/70"></div>
+              <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/70"></div>
+              <div class="w-2.5 h-2.5 rounded-full bg-green-500/70"></div>
+            </div>
+            <div class="flex-1 max-w-sm mx-auto h-5 bg-zinc-950 rounded px-2 text-[10px] text-zinc-400 flex items-center justify-center font-mono border border-zinc-800">
+              <i data-lucide="lock" class="w-2.5 h-2.5 text-emerald-400 mr-1.5"></i>
+              <span id="preview-url-text">Select or generate a sandbox</span>
+            </div>
+          </div>
+
+          <!-- Iframe for Preview Content -->
+          <div id="preview-placeholder" class="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-500 space-y-2">
+            <i data-lucide="layout" class="w-8 h-8 text-zinc-600"></i>
+            <span class="text-xs text-zinc-400">No active preview loaded</span>
+            <span class="text-[11px] text-zinc-600">Run a task or select an existing draft from the top menu</span>
+          </div>
+          <iframe id="preview-frame" class="w-full flex-1 border-0 bg-white hidden"></iframe>
+
+          <!-- Code Inspector View: Split Layout (Files on left, Code on right) -->
+          <div id="code-view" class="hidden w-full flex-1 flex overflow-hidden bg-zinc-950 font-mono text-xs">
+            <!-- Left Sidebar: File Tree (small width) -->
+            <aside class="w-48 sm:w-52 border-r border-zinc-800 bg-zinc-925/80 flex flex-col shrink-0">
+              <div class="h-8 border-b border-zinc-800 px-3 flex items-center justify-between text-[11px] text-zinc-400 font-sans font-medium">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="folder-tree" class="w-3.5 h-3.5 text-indigo-400"></i>
+                  <span>Files</span>
+                </span>
+                <span id="file-count-badge" class="px-1.5 py-0.2 rounded bg-zinc-800 text-[10px] text-zinc-400 font-mono">0</span>
+              </div>
+              <div id="code-file-list" class="flex-1 overflow-y-auto p-1.5 space-y-0.5">
+                <div class="text-[11px] text-zinc-600 p-2 italic font-sans">No files loaded</div>
+              </div>
+            </aside>
+
+            <!-- Right Area: Full Code Viewer -->
+            <section class="flex-1 flex flex-col min-w-0 bg-zinc-950">
+              <div class="h-8 border-b border-zinc-800 bg-zinc-900/60 px-3 flex items-center justify-between shrink-0 font-sans text-xs">
+                <div class="flex items-center gap-2 truncate">
+                  <i id="active-file-icon" data-lucide="file-code" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
+                  <span id="active-file-name" class="font-mono text-zinc-200 text-[11px] truncate">No file selected</span>
+                </div>
+                <button onclick="copyActiveCode()" id="btn-copy-code" class="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 px-2 py-0.5 rounded hover:bg-zinc-800 transition-colors">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  <span id="copy-btn-text">Copy</span>
+                </button>
+              </div>
+              <div class="flex-1 overflow-auto p-4 font-mono text-xs leading-relaxed text-zinc-300">
+                <pre><code id="code-content">// Select a file from the left to view code...</code></pre>
+              </div>
+            </section>
+          </div>
+
+          <!-- Context & Trace View -->
+          <div id="context-view" class="hidden w-full flex-1 overflow-auto p-5 bg-zinc-950 font-sans text-xs space-y-4">
+            <!-- Context Meter Card -->
+            <div class="bg-zinc-900/80 border border-zinc-800 rounded-xl p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-zinc-200 flex items-center gap-2">
+                  <i data-lucide="activity" class="w-4 h-4 text-indigo-400"></i>
+                  Context Window & Token Budget
+                </span>
+                <span id="context-util-text" class="text-xs font-mono text-zinc-400">0 / 16,384 tokens (0%)</span>
+              </div>
+              <!-- Progress Bar -->
+              <div class="w-full h-2 bg-zinc-950 rounded-full overflow-hidden border border-zinc-800">
+                <div id="context-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-[11px] font-mono">
+                <div class="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800/80">
+                  <div class="text-zinc-500 text-[10px]">Model</div>
+                  <div id="card-model-name" class="text-zinc-200 font-semibold truncate">qwen2.5-coder:14b</div>
+                </div>
+                <div class="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800/80">
+                  <div class="text-zinc-500 text-[10px]">Context Limit</div>
+                  <div id="card-context-limit" class="text-indigo-400 font-semibold">16,384 tokens</div>
+                </div>
+                <div class="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800/80">
+                  <div class="text-zinc-500 text-[10px]">Tokens In (Prompt)</div>
+                  <div id="card-tokens-in" class="text-emerald-400 font-semibold">—</div>
+                </div>
+                <div class="bg-zinc-950/70 p-2.5 rounded-lg border border-zinc-800/80">
+                  <div class="text-zinc-500 text-[10px]">Tokens Out (Code)</div>
+                  <div id="card-tokens-out" class="text-cyan-400 font-semibold">—</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Run Report & Trace -->
+            <div class="bg-zinc-900/80 border border-zinc-800 rounded-xl overflow-hidden">
+              <div class="h-9 px-4 border-b border-zinc-800 flex items-center justify-between text-xs text-zinc-300 font-medium bg-zinc-900/50">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i>
+                  <span>Run Execution Report (REPORT.md)</span>
+                </span>
+                <span id="run-trace-id" class="font-mono text-[10px] text-zinc-500">No active run</span>
+              </div>
+              <div class="p-4 bg-zinc-950 overflow-auto font-mono text-xs leading-relaxed text-zinc-300 max-h-[380px]">
+                <pre><code id="report-md-content">// Run report will appear here once executed...</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Real Interactive Client-side Script -->
+  <script>
+    lucide.createIcons();
+
+    let currentMode = 'draft'; // 'draft' or 'project'
+    let currentViewTab = 'preview'; // 'preview' or 'code'
+    let activePreviewUrl = null;
+    let isRunning = false;
+
+    let currentSandboxBase = '';
+    let currentFiles = [];
+    let activeFilePath = '';
+
+    // Reset workspace to a pristine New Sandbox state
+    function resetToNewSandbox() {
+      activePreviewUrl = null;
+      currentSandboxBase = '';
+      currentFiles = [];
+      activeFilePath = '';
+
+      // Reset dropdown
+      const selector = document.getElementById('sandbox-selector');
+      if (selector) selector.value = '';
+
+      // Hide delete button
+      const delBtn = document.getElementById('btn-delete-sandbox');
+      if (delBtn) delBtn.classList.add('hidden');
+
+      // Reset Live Preview to welcoming Empty State
+      const frame = document.getElementById('preview-frame');
+      const placeholder = document.getElementById('preview-placeholder');
+      const urlText = document.getElementById('preview-url-text');
+      const extLink = document.getElementById('btn-open-external');
+
+      frame.classList.add('hidden');
+      frame.src = 'about:blank';
+      placeholder.classList.remove('hidden');
+      placeholder.innerHTML = `
+        <div class="max-w-md w-full p-6 text-center space-y-4">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center text-indigo-400 mx-auto shadow-lg shadow-indigo-950/30">
+            <i data-lucide="sparkles" class="w-6 h-6"></i>
+          </div>
+          <div class="space-y-1.5">
+            <h3 class="text-sm font-semibold text-zinc-100">Create New ${currentMode === 'draft' ? 'Draft' : 'Project'} Sandbox</h3>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Type your prompt below to let the agent architect and build it, or spin up an instant blank starter immediately.
+            </p>
+          </div>
+          <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+            <button onclick="quickScaffoldStarter()" class="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-indigo-500/60 text-xs font-medium text-zinc-200 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Instant Blank Starter</span>
+            </button>
+          </div>
+        </div>
+      `;
+      urlText.textContent = `sandboxes/${currentMode}s/(new sandbox)`;
+      extLink.href = '#';
+
+      // Reset Code Inspector
+      renderCodeFileList([]);
+      document.getElementById('active-file-name').textContent = 'No file selected';
+      document.getElementById('code-content').textContent = '// Enter a prompt or click "Instant Blank Starter" to populate code...';
+
+      // Reset Left Message Stream to Clean Empty State
+      const stream = document.getElementById('message-stream');
+      stream.innerHTML = `
+        <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-500 space-y-3">
+          <div class="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
+            <i data-lucide="terminal" class="w-6 h-6"></i>
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-sm font-semibold text-zinc-300">Ready for Agent Tasks</h3>
+            <p class="text-xs max-w-[280px] leading-relaxed text-zinc-500">
+              Enter any prompt below to run Tinker's live agentic engine. A new sandbox folder in <span class="text-zinc-300 font-mono">sandboxes/${currentMode}s/</span> will be created.
+            </p>
+          </div>
+        </div>
+      `;
+
+      // Reset Context & Trace View
+      document.getElementById('card-tokens-in').textContent = '—';
+      document.getElementById('card-tokens-out').textContent = '—';
+      document.getElementById('context-util-text').textContent = '0 / 16,384 tokens (0%)';
+      document.getElementById('context-progress-bar').style.width = '0%';
+      document.getElementById('run-trace-id').textContent = 'No active run';
+      document.getElementById('report-md-content').textContent = '// Run report will appear here once executed...';
+
+      // Focus prompt input
+      const input = document.getElementById('prompt-input');
+      if (input) {
+        input.placeholder = `Describe what to build in this new ${currentMode}...`;
+        input.focus();
+      }
+
+      lucide.createIcons();
+    }
+
+    // Load available sandboxes from server
+    async function fetchSandboxes(pathToKeep = null) {
+      try {
+        const res = await fetch('/api/sandboxes');
+        if (!res.ok) return;
+        const data = await res.json();
+        const selector = document.getElementById('sandbox-selector');
+        selector.innerHTML = '<option value="">(Auto-create new sandbox)</option>';
+
+        const targetList = (currentMode === 'draft') ? data.drafts : data.projects;
+        targetList.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.path;
+          opt.textContent = `${item.name} (${item.files.length} files)`;
+          selector.appendChild(opt);
+        });
+
+        const targetPath = (pathToKeep !== null && pathToKeep !== undefined) ? pathToKeep : activePreviewUrl;
+        if (targetPath) {
+          const match = Array.from(selector.options).find(o => o.value && (o.value === targetPath || targetPath.startsWith(o.value)));
+          if (match) {
+            selector.value = match.value;
+            document.getElementById('btn-delete-sandbox').classList.remove('hidden');
+          } else {
+            selector.value = '';
+            document.getElementById('btn-delete-sandbox').classList.add('hidden');
+          }
+        } else {
+          selector.value = '';
+          document.getElementById('btn-delete-sandbox').classList.add('hidden');
+        }
+
+        // Auto-select latest on first startup if no previous action taken
+        if (!activePreviewUrl && !sessionStorage.getItem('tinker_started') && targetList.length > 0 && targetList[0].has_index) {
+          sessionStorage.setItem('tinker_started', '1');
+          loadSelectedSandbox(targetList[0].path);
+        }
+      } catch (e) {
+        console.warn('Could not fetch sandboxes:', e);
+      }
+    }
+
+    // Instant 1-click starter template scaffold
+    async function quickScaffoldStarter() {
+      const stack = document.getElementById('stack-select').value;
+      const placeholder = document.getElementById('preview-placeholder');
+      placeholder.innerHTML = `
+        <div class="flex flex-col items-center justify-center p-6 space-y-3">
+          <div class="w-7 h-7 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
+          <span class="text-xs text-zinc-300 font-mono">Provisioning sandbox baseline...</span>
+        </div>
+      `;
+      try {
+        const res = await fetch('/api/sandboxes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: currentMode,
+            stack: stack,
+            task: 'Initial starter template'
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          await fetchSandboxes(data.path);
+          loadSelectedSandbox(data.preview_url || data.path);
+        } else {
+          alert('Failed to scaffold starter sandbox');
+          resetToNewSandbox();
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+        resetToNewSandbox();
+      }
+    }
+
+    // Safely delete selected sandbox from disk
+    async function deleteCurrentSandbox() {
+      const pathToDelete = currentSandboxBase || activePreviewUrl;
+      if (!pathToDelete) return;
+      const name = pathToDelete.replace(/\/$/, '').split('/').pop();
+      if (!confirm(`Delete sandbox "${name}"?\nThis permanently removes its directory and run logs from disk.`)) return;
+
+      try {
+        const res = await fetch(`/api/sandboxes?path=${encodeURIComponent(pathToDelete)}`, {
+          method: 'DELETE'
+        });
+        if (res.ok) {
+          await fetchSandboxes('');
+          resetToNewSandbox();
+        } else {
+          const data = await res.json();
+          alert(data.error || 'Failed to delete');
+        }
+      } catch (err) {
+        alert('Error deleting sandbox: ' + err.message);
+      }
+    }
+
+    // Helper: Pick icon based on extension
+    function getFileIcon(filename) {
+      if (filename.endsWith('.html')) return 'code-2';
+      if (filename.endsWith('.css')) return 'palette';
+      if (filename.endsWith('.js') || filename.endsWith('.ts') || filename.endsWith('.tsx')) return 'file-code';
+      if (filename.endsWith('.json')) return 'file-json';
+      if (filename.endsWith('.py')) return 'terminal';
+      if (filename.endsWith('.md')) return 'file-text';
+      return 'file';
+    }
+
+    // Load a selected sandbox into preview, code tab, and chat history
+    async function loadSelectedSandbox(urlPath) {
+      if (!urlPath) {
+        resetToNewSandbox();
+        return;
+      }
+      activePreviewUrl = urlPath;
+      currentSandboxBase = urlPath.endsWith('/') ? urlPath : (urlPath.substring(0, urlPath.lastIndexOf('/') + 1));
+
+      // Synchronize dropdown value and delete button
+      const selector = document.getElementById('sandbox-selector');
+      if (selector) {
+        const match = Array.from(selector.options).find(o => o.value && (o.value === currentSandboxBase || currentSandboxBase.startsWith(o.value)));
+        if (match) selector.value = match.value;
+      }
+      document.getElementById('btn-delete-sandbox').classList.remove('hidden');
+
+      const frame = document.getElementById('preview-frame');
+      const placeholder = document.getElementById('preview-placeholder');
+      const urlText = document.getElementById('preview-url-text');
+      const extLink = document.getElementById('btn-open-external');
+
+      placeholder.classList.add('hidden');
+      frame.classList.remove('hidden');
+      frame.src = urlPath;
+      urlText.textContent = urlPath;
+      extLink.href = urlPath;
+
+      // 1. Fetch file list for this sandbox
+      try {
+        const res = await fetch(`/api/sandbox-files?path=${encodeURIComponent(currentSandboxBase)}`);
+        if (res.ok) {
+          const data = await res.json();
+          currentFiles = data.files || [];
+          renderCodeFileList(currentFiles);
+        }
+      } catch (err) {
+        console.warn('Could not list sandbox files:', err);
+      }
+
+      // 2. Fetch and render previous chat/run history on the left side
+      fetchSandboxHistory(currentSandboxBase);
+    }
+
+    // Fetch previous run logs for this sandbox and replay chat
+    async function fetchSandboxHistory(basePath) {
+      const stream = document.getElementById('message-stream');
+      try {
+        const res = await fetch(`/api/sandbox-history?path=${encodeURIComponent(basePath)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const runs = data.runs || [];
+
+        if (runs.length === 0) {
+          stream.innerHTML = `
+            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center p-6 text-zinc-500 space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400">
+                <i data-lucide="terminal" class="w-6 h-6"></i>
+              </div>
+              <div class="space-y-1">
+                <h3 class="text-sm font-semibold text-zinc-300">Ready for Agent Tasks</h3>
+                <p class="text-xs max-w-[280px] leading-relaxed text-zinc-500">
+                  Enter any prompt below to run Tinker's live agentic engine.
+                </p>
+              </div>
+            </div>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        // Render previous conversation runs
+        stream.innerHTML = '';
+        runs.forEach(run => {
+          // Render User Prompt (Clean, continuous conversational typography)
+          const userMsg = document.createElement('div');
+          userMsg.className = "pt-3 pb-1 border-t border-zinc-800/60 first:border-t-0 first:pt-0";
+          userMsg.innerHTML = `
+            <div class="flex items-center gap-2 text-xs font-semibold text-zinc-400 mb-1">
+              <span class="w-4 h-4 rounded-full bg-zinc-800 text-[9px] font-mono text-zinc-300 flex items-center justify-center border border-zinc-700">U</span>
+              <span>You</span>
+            </div>
+            <div class="text-xs text-zinc-100 font-medium pl-6 leading-relaxed">
+              ${(run.task || 'Run Task').replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+            </div>
+          `;
+          stream.appendChild(userMsg);
+
+          // Render Agent Run (Cardless, Inline Progressive Timeline)
+          const agentMsg = document.createElement('div');
+          agentMsg.className = "agent-turn space-y-1.5 pt-1 pb-3";
+          
+          let planToggleHtml = '';
+          if (run.plan_md) {
+            const cleanPlan = run.plan_md.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            planToggleHtml = `
+              <details class="group cursor-pointer my-1">
+                <summary class="flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-zinc-200 select-none py-0.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+                  <span>Planning</span>
+                  <span class="text-[10px] text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div class="mt-1 pl-3.5 border-l-2 border-indigo-500/30 font-mono text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap">${cleanPlan}</div>
+              </details>
+            `;
+          }
+
+          let stepsRailHtml = '';
+          if (run.timeline_steps && run.timeline_steps.length > 0) {
+            stepsRailHtml = run.timeline_steps.map(s => {
+              let dotColor = 'bg-zinc-600';
+              let textClass = 'text-zinc-300';
+              if (s.type === 'tool_call') {
+                dotColor = 'bg-indigo-400';
+                textClass = 'text-zinc-200';
+              } else if (s.type === 'tool_error') {
+                dotColor = 'bg-rose-400';
+                textClass = 'text-rose-400';
+              } else if (s.type === 'tool_result') {
+                dotColor = 'bg-emerald-400';
+                textClass = 'text-zinc-400';
+              }
+              return `
+                <div class="flex items-center gap-2 py-0.5 text-[11px] font-mono leading-relaxed truncate">
+                  <span class="w-1.5 h-1.5 rounded-full ${dotColor} shrink-0"></span>
+                  <span class="${textClass} truncate">${s.text}</span>
+                </div>
+              `;
+            }).join('');
+          } else {
+            stepsRailHtml = `
+              <div class="flex items-center gap-2 py-0.5 text-[11px] font-mono text-zinc-500">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                <span>${run.stop_reason || 'Run completed successfully'}</span>
+              </div>
+            `;
+          }
+
+          agentMsg.innerHTML = `
+            <div class="flex items-center justify-between text-xs text-zinc-400">
+              <div class="flex items-center gap-2 font-medium text-zinc-300">
+                <div class="w-4 h-4 rounded-full bg-indigo-950 flex items-center justify-center text-indigo-400 border border-indigo-800/60">
+                  <i data-lucide="bot" class="w-2.5 h-2.5"></i>
+                </div>
+                <span>Tinker Agent</span>
+              </div>
+              <div class="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
+                <span>${run.steps_used ? `${run.steps_used} steps` : ''}</span>
+                ${run.total_time_seconds ? `<span>• ${Math.round(run.total_time_seconds)}s</span>` : ''}
+              </div>
+            </div>
+
+            <div class="pl-6 space-y-1.5">
+              ${planToggleHtml}
+              
+              <!-- Timeline Rail (High Density) -->
+              <div class="pl-2.5 border-l border-zinc-800 space-y-0.5 my-1">
+                ${stepsRailHtml}
+              </div>
+
+              <!-- Completion Line -->
+              <div class="flex items-center justify-between pt-1 border-t border-zinc-800/50 text-[11px] font-mono text-zinc-500">
+                <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
+                  <i data-lucide="check" class="w-3 h-3"></i>
+                  <span>${run.status || 'Finished'}</span>
+                </span>
+                <button onclick="switchViewTab('context')" class="text-zinc-500 hover:text-zinc-300 transition-colors">
+                  Full Trace ↗
+                </button>
+              </div>
+            </div>
+          `;
+          stream.appendChild(agentMsg);
+        });
+
+        // Update Context & Trace Tab with latest run metrics
+        if (runs.length > 0) {
+          const latestRun = runs[runs.length - 1];
+          const tokensIn = latestRun.total_tokens_in || 0;
+          const tokensOut = latestRun.total_tokens_out || 0;
+          const totalTok = tokensIn + tokensOut;
+          const limit = 16384;
+          const pct = Math.min(100, Math.round((totalTok / limit) * 100));
+
+          if (tokensIn) document.getElementById('card-tokens-in').textContent = tokensIn.toLocaleString();
+          if (tokensOut) document.getElementById('card-tokens-out').textContent = tokensOut.toLocaleString();
+          document.getElementById('context-util-text').textContent = `${totalTok.toLocaleString()} / ${limit.toLocaleString()} tokens (${pct}%)`;
+          document.getElementById('context-progress-bar').style.width = `${pct}%`;
+          
+          if (latestRun.run_id) {
+            document.getElementById('run-trace-id').textContent = `Run ID: ${latestRun.run_id}`;
+          }
+          if (latestRun.report_md) {
+            document.getElementById('report-md-content').textContent = latestRun.report_md;
+          }
+        }
+
+        lucide.createIcons();
+        stream.scrollTop = stream.scrollHeight;
+      } catch (err) {
+        console.warn('Could not load sandbox history:', err);
+      }
+    }
+
+    // Render file tree on the left of Code Inspector
+    function renderCodeFileList(files) {
+      const listEl = document.getElementById('code-file-list');
+      const badge = document.getElementById('file-count-badge');
+      badge.textContent = files.length;
+      listEl.innerHTML = '';
+
+      if (files.length === 0) {
+        listEl.innerHTML = '<div class="text-[11px] text-zinc-600 p-2 italic font-sans">No files found</div>';
+        return;
+      }
+
+      files.forEach((file, idx) => {
+        const iconName = getFileIcon(file);
+        const btn = document.createElement('button');
+        btn.id = `file-btn-${idx}`;
+        btn.className = "w-full text-left px-2 py-1.5 rounded text-[11px] font-mono flex items-center gap-2 transition-colors text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 truncate";
+        btn.innerHTML = `
+          <i data-lucide="${iconName}" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+          <span class="truncate">${file}</span>
+        `;
+        btn.onclick = () => selectCodeFile(file, idx);
+        listEl.appendChild(btn);
+      });
+
+      lucide.createIcons();
+
+      // Auto-select index.html or first file
+      const indexIdx = files.findIndex(f => f.endsWith('index.html'));
+      const defaultIdx = indexIdx >= 0 ? indexIdx : 0;
+      selectCodeFile(files[defaultIdx], defaultIdx);
+    }
+
+    // Select and fetch content of a file
+    async function selectCodeFile(file, idx) {
+      if (!file) return;
+      activeFilePath = file;
+
+      // Update button highlights
+      document.querySelectorAll('#code-file-list button').forEach(b => {
+        b.className = "w-full text-left px-2 py-1.5 rounded text-[11px] font-mono flex items-center gap-2 transition-colors text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 truncate";
+      });
+      const activeBtn = document.getElementById(`file-btn-${idx}`);
+      if (activeBtn) {
+        activeBtn.className = "w-full text-left px-2 py-1.5 rounded text-[11px] font-mono flex items-center gap-2 transition-colors bg-zinc-800 text-indigo-300 font-medium truncate";
+      }
+
+      document.getElementById('active-file-name').textContent = file;
+      document.getElementById('code-content').textContent = `// Loading ${file}...`;
+
+      try {
+        const fullUrl = `${currentSandboxBase}${file}`;
+        const res = await fetch(fullUrl);
+        if (res.ok) {
+          const content = await res.text();
+          document.getElementById('code-content').textContent = content;
+        } else {
+          document.getElementById('code-content').textContent = `// Failed to load: HTTP ${res.status}`;
+        }
+      } catch (err) {
+        document.getElementById('code-content').textContent = `// Error reading file: ${err.message}`;
+      }
+    }
+
+    // Copy active code to clipboard
+    function copyActiveCode() {
+      const code = document.getElementById('code-content').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const btnText = document.getElementById('copy-btn-text');
+        btnText.textContent = "Copied!";
+        setTimeout(() => btnText.textContent = "Copy", 1500);
+      });
+    }
+
+    // Switch between Draft and Project modes
+    function switchMode(mode) {
+      currentMode = mode;
+      const btnDraft = document.getElementById('btn-mode-draft');
+      const btnProject = document.getElementById('btn-mode-project');
+      const bannerText = document.getElementById('mode-banner-text');
+      const badge = document.getElementById('mode-badge');
+
+      if (mode === 'draft') {
+        btnDraft.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all bg-zinc-800 text-zinc-100 shadow-sm";
+        btnProject.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all text-zinc-400 hover:text-zinc-200";
+        bannerText.innerHTML = 'Target: <strong class="text-zinc-200">sandboxes/drafts/</strong> (Fast canvas preview)';
+        badge.textContent = 'DRAFT';
+        badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-950 text-indigo-400 border border-indigo-800/40';
+      } else {
+        btnProject.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all bg-zinc-800 text-zinc-100 shadow-sm";
+        btnDraft.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all text-zinc-400 hover:text-zinc-200";
+        bannerText.innerHTML = 'Target: <strong class="text-zinc-200">sandboxes/projects/</strong> (Full repo workspace)';
+        badge.textContent = 'PROJECT';
+        badge.className = 'px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800/40';
+      }
+      lucide.createIcons();
+      resetToNewSandbox();
+      fetchSandboxes(null);
+    }
+
+    // Switch View Tab (Live Preview vs Code Inspector vs Context & Trace)
+    function switchViewTab(tab) {
+      currentViewTab = tab;
+      const tabPreview = document.getElementById('tab-preview');
+      const tabCode = document.getElementById('tab-code');
+      const tabContext = document.getElementById('tab-context');
+      const frame = document.getElementById('preview-frame');
+      const placeholder = document.getElementById('preview-placeholder');
+      const codeView = document.getElementById('code-view');
+      const contextView = document.getElementById('context-view');
+
+      // Reset all tab styling
+      [tabPreview, tabCode, tabContext].forEach(t => {
+        if (t) t.className = "px-3 py-1 rounded text-xs font-medium text-zinc-400 hover:text-zinc-200 flex items-center gap-1.5";
+      });
+      frame.classList.add('hidden');
+      placeholder.classList.add('hidden');
+      codeView.classList.add('hidden');
+      contextView.classList.add('hidden');
+
+      if (tab === 'preview') {
+        tabPreview.className = "px-3 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-100 flex items-center gap-1.5";
+        if (activePreviewUrl) {
+          frame.classList.remove('hidden');
+        } else {
+          placeholder.classList.remove('hidden');
+        }
+      } else if (tab === 'code') {
+        tabCode.className = "px-3 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-100 flex items-center gap-1.5";
+        codeView.classList.remove('hidden');
+      } else if (tab === 'context') {
+        tabContext.className = "px-3 py-1 rounded text-xs font-medium bg-zinc-800 text-zinc-100 flex items-center gap-1.5";
+        contextView.classList.remove('hidden');
+      }
+    }
+
+    // Fetch active model config & context limits on startup
+    async function fetchAppConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (cfg.model) {
+          document.getElementById('badge-model-name').textContent = cfg.model;
+          document.getElementById('card-model-name').textContent = cfg.model;
+        }
+        if (cfg.context_limit) {
+          const k = Math.round(cfg.context_limit / 1024);
+          document.getElementById('badge-context-limit').textContent = `${k}k context`;
+          document.getElementById('card-context-limit').textContent = `${cfg.context_limit.toLocaleString()} tokens`;
+        }
+      } catch (err) {
+        console.warn('Could not load config:', err);
+      }
+    }
+
+    // Set responsive viewport sizing
+    function setViewport(size) {
+      const wrapper = document.getElementById('preview-wrapper');
+      const btnDesktop = document.getElementById('vp-desktop');
+      const btnTablet = document.getElementById('vp-tablet');
+      const btnMobile = document.getElementById('vp-mobile');
+
+      btnDesktop.className = "p-1 rounded hover:text-zinc-100";
+      btnTablet.className = "p-1 rounded hover:text-zinc-100";
+      btnMobile.className = "p-1 rounded hover:text-zinc-100";
+
+      if (size === 'desktop') {
+        wrapper.style.maxWidth = '100%';
+        btnDesktop.className = "p-1 rounded bg-zinc-800 text-zinc-100";
+      } else if (size === 'tablet') {
+        wrapper.style.maxWidth = '768px';
+        btnTablet.className = "p-1 rounded bg-zinc-800 text-zinc-100";
+      } else if (size === 'mobile') {
+        wrapper.style.maxWidth = '375px';
+        btnMobile.className = "p-1 rounded bg-zinc-800 text-zinc-100";
+      }
+    }
+
+    function reloadPreview() {
+      const frame = document.getElementById('preview-frame');
+      if (activePreviewUrl) {
+        frame.src = activePreviewUrl;
+      }
+    }
+
+    // Handle real agent run via SSE
+    async function handleSendMessage(event) {
+      if (event) event.preventDefault();
+      if (isRunning) return;
+
+      const input = document.getElementById('prompt-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const stream = document.getElementById('message-stream');
+      const emptyState = document.getElementById('empty-state');
+      if (emptyState) emptyState.remove();
+
+      isRunning = true;
+      document.getElementById('send-button').disabled = true;
+      document.getElementById('prompt-input').disabled = true;
+      document.getElementById('connection-status').innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+        Agent Running...
+      `;
+      document.getElementById('connection-status').className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-950/60 text-amber-400 border border-amber-800/40 font-mono text-[11px]';
+
+      // 1. Append User Message (Clean, natural conversation)
+      const userMsg = document.createElement('div');
+      userMsg.className = "pt-3 pb-1 border-t border-zinc-800/60 first:border-t-0 first:pt-0";
+      userMsg.innerHTML = `
+        <div class="flex items-center gap-2 text-xs font-semibold text-zinc-400 mb-1">
+          <span class="w-4 h-4 rounded-full bg-zinc-800 text-[9px] font-mono text-zinc-300 flex items-center justify-center border border-zinc-700">U</span>
+          <span>You</span>
+        </div>
+        <div class="text-xs text-zinc-100 font-medium pl-6 leading-relaxed">
+          ${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+        </div>
+      `;
+      stream.appendChild(userMsg);
+      input.value = '';
+
+      // 2. Append Agent Turn (Cardless, Continuous Timeline)
+      const agentMsg = document.createElement('div');
+      agentMsg.className = "agent-turn space-y-1.5 pt-1 pb-3";
+      agentMsg.innerHTML = `
+        <div class="flex items-center justify-between text-xs text-zinc-400">
+          <div class="flex items-center gap-2 font-medium text-zinc-300">
+            <div class="w-4 h-4 rounded-full bg-indigo-950 flex items-center justify-center text-indigo-400 border border-indigo-800/60">
+              <i data-lucide="bot" class="w-2.5 h-2.5"></i>
+            </div>
+            <span>Tinker Agent</span>
+          </div>
+          <div class="turn-status-badge flex items-center gap-1.5 text-[10px] font-mono text-indigo-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+            <span>Running</span>
+          </div>
+        </div>
+
+        <div class="pl-6 space-y-1.5">
+          <!-- Thought & Plan Slot -->
+          <div class="turn-plan-slot"></div>
+
+          <!-- Progressive Stepper Timeline Rail -->
+          <div class="turn-step-rail pl-2.5 border-l border-zinc-800 space-y-0.5 my-1 font-mono text-[11px]">
+            <div class="turn-active-step flex items-center gap-2 py-0.5 text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping shrink-0"></span>
+              <span class="turn-status-text text-indigo-300 truncate">Thinking...</span>
+            </div>
+          </div>
+
+          <!-- Speech summary slot -->
+          <div class="turn-speech-slot text-xs text-zinc-300 italic hidden pt-1"></div>
+
+          <!-- Single line completion footer -->
+          <div class="turn-completion-footer flex items-center justify-between pt-1 border-t border-zinc-800/50 text-[11px] font-mono text-zinc-500">
+            <span class="turn-footer-status flex items-center gap-1.5 text-zinc-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+              <span>Thinking...</span>
+            </span>
+            <button onclick="switchViewTab('context')" class="text-zinc-500 hover:text-zinc-300 transition-colors">
+              Full Trace ↗
+            </button>
+          </div>
+        </div>
+      `;
+      stream.appendChild(agentMsg);
+      stream.scrollTop = stream.scrollHeight;
+      lucide.createIcons();
+
+      // 3. Initiate SSE connection to POST /api/run
+      const stack = document.getElementById('stack-select').value;
+      const selectedSandbox = document.getElementById('sandbox-selector').value;
+      const targetName = selectedSandbox ? selectedSandbox.replace(/\/$/, '').split('/').pop() : '';
+
+      try {
+        const response = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task: text,
+            mode: currentMode,
+            stack: stack,
+            name: targetName
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server returned HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop(); // Keep incomplete chunk
+
+          for (const part of parts) {
+            const lines = part.trim().split('\n');
+            let eventType = 'message';
+            let eventData = '';
+
+            for (const line of lines) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith('data: ')) {
+                eventData = line.slice(6).trim();
+              }
+            }
+
+            if (!eventData) continue;
+            try {
+              const data = JSON.parse(eventData);
+              handleLiveEvent(eventType, data, agentMsg);
+            } catch (err) {
+              console.error('Error parsing event data:', err);
+            }
+          }
+        }
+      } catch (err) {
+        const footerStatus = agentMsg.querySelector('.turn-footer-status');
+        if (footerStatus) {
+          footerStatus.className = "turn-footer-status flex items-center gap-1.5 text-rose-400 font-medium";
+          footerStatus.innerHTML = `<span>❌ Error: ${err.message}</span>`;
+        }
+      } finally {
+        isRunning = false;
+        document.getElementById('send-button').disabled = false;
+        document.getElementById('prompt-input').disabled = false;
+        document.getElementById('connection-status').innerHTML = `
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          Ready
+        `;
+        document.getElementById('connection-status').className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 font-mono text-[11px]';
+        fetchSandboxes(activePreviewUrl);
+      }
+    }
+
+    // Process each real event from the agent in the continuous progressive timeline
+    function handleLiveEvent(type, data, agentMsg) {
+      const stream = document.getElementById('message-stream');
+      const statusText = agentMsg.querySelector('.turn-status-text');
+      const rail = agentMsg.querySelector('.turn-step-rail');
+      const planSlot = agentMsg.querySelector('.turn-plan-slot');
+      const speechSlot = agentMsg.querySelector('.turn-speech-slot');
+      const footerStatus = agentMsg.querySelector('.turn-footer-status');
+      const badge = agentMsg.querySelector('.turn-status-badge');
+
+      if (type === 'init') {
+        if (statusText) statusText.textContent = `Target initialized: ${data.target_dir.split('\\').pop()}`;
+      } else if (type === 'run_started') {
+        if (statusText) statusText.textContent = `Agent started (Model: ${data.config?.model_main || 'ollama'})`;
+      } else if (type === 'plan_created') {
+        const cleanPlan = (data.markdown || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const count = data.checklist ? data.checklist.length : 0;
+        planSlot.innerHTML = `
+          <details class="group cursor-pointer my-1">
+            <summary class="flex items-center gap-2 text-xs font-mono text-zinc-400 hover:text-zinc-200 select-none py-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
+              <span>Planning</span>
+              <span class="text-[10px] text-zinc-500 group-open:rotate-180 transition-transform">▼</span>
+            </summary>
+            <div class="mt-1 pl-3.5 border-l-2 border-indigo-500/30 font-mono text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap">${cleanPlan}</div>
+          </details>
+        `;
+        if (statusText) statusText.textContent = `Planning complete (${count} steps)...`;
+      } else if (type === 'step_progress') {
+        if (statusText) statusText.textContent = 'Thinking...';
+      } else if (type === 'tool_call') {
+        // Remove active step placeholder
+        const activeLine = rail.querySelector('.turn-active-step');
+        if (activeLine) activeLine.remove();
+
+        const desc = data.human_desc || `🔧 ${data.tool}`;
+        const stepRow = document.createElement('div');
+        stepRow.className = "step-row flex items-center gap-2 py-0.5 text-[11px] font-mono leading-relaxed truncate";
+        stepRow.innerHTML = `
+          <span class="step-dot w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0"></span>
+          <span class="text-zinc-200 truncate">${desc}</span>
+        `;
+        rail.appendChild(stepRow);
+      } else if (type === 'tool_result') {
+        const stepRows = rail.querySelectorAll('.step-row');
+        const lastStep = stepRows[stepRows.length - 1];
+        if (lastStep) {
+          const dot = lastStep.querySelector('.step-dot');
+          if (dot) {
+            dot.className = data.success 
+              ? "step-dot w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" 
+              : "step-dot w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0";
+          }
+          if (!data.success) {
+            const errRaw = (data.result || 'Error').split('\n')[0].slice(0, 50);
+            const detailSpan = document.createElement('span');
+            detailSpan.className = "text-[10px] text-rose-400 ml-auto font-sans truncate pl-2 shrink-0";
+            detailSpan.textContent = errRaw;
+            lastStep.appendChild(detailSpan);
+          }
+        }
+      } else if (type === 'speech_summary') {
+        if (speechSlot) {
+          speechSlot.textContent = data.text;
+          speechSlot.classList.remove('hidden');
+        }
+      } else if (type === 'complete') {
+        // Remove any dangling placeholder
+        const activeLine = rail.querySelector('.turn-active-step');
+        if (activeLine) activeLine.remove();
+
+        const isError = (data.status === 'error') || !!data.error;
+        if (badge) {
+          badge.innerHTML = isError
+            ? `<span class="text-rose-400 font-mono">Failed</span>`
+            : `<span class="text-emerald-400 font-mono">Finished</span>`;
+        }
+        if (footerStatus) {
+          if (isError) {
+            footerStatus.className = "turn-footer-status flex items-center gap-1.5 text-rose-400 font-medium";
+            footerStatus.innerHTML = `
+              <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+              <span>${data.error || 'Execution Error'}</span>
+            `;
+          } else {
+            footerStatus.className = "turn-footer-status flex items-center gap-1.5 text-emerald-400 font-medium";
+            footerStatus.innerHTML = `
+              <i data-lucide="check" class="w-3 h-3"></i>
+              <span>Completed (${data.files?.length || 0} files verified)</span>
+            `;
+          }
+        }
+        lucide.createIcons();
+
+        if (data.preview_url) {
+          fetchSandboxes(data.preview_url).then(() => {
+            loadSelectedSandbox(data.preview_url);
+          });
+        }
+      }
+      stream.scrollTop = stream.scrollHeight;
+    }
+
+    // Initial load on page start
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) lucide.createIcons();
+      fetchAppConfig();
+      fetchSandboxes();
+    });
+  </script>
+</body>
+</html>

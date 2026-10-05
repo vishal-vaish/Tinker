@@ -155,7 +155,7 @@ def detect_single_primary_stack(
         return REACT_PROFILE
     if "python" in all_matching:
         return PYTHON_PROFILE
-    if "html" in all_matching and (default_stack == "html" or "html" in task.lower()):
+    if "html" in all_matching:
         return HTML_PROFILE
 
     # Config-driven fallback (defaults to Next.js TypeScript)

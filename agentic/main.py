@@ -58,6 +58,9 @@ def on_run_started(event: Event):
     print(f"  Task:     {p.get('task', '')[:80]}")
     target_type = "Draft" if p.get('is_draft') else "Project"
     print(f"  Target:   [{target_type}] {p.get('project_root', '')}")
+    if p.get('is_draft'):
+        draft_id = os.path.basename(p.get('project_root', ''))
+        print(f"  Draft ID: {draft_id}")
     if p.get('run_dir'):
         print(f"  Trace:    {p.get('run_dir')}")
     print(f"  Model:    {p.get('config', {}).get('model_main', 'unknown')}")
@@ -161,12 +164,16 @@ Examples:
     
     args = parser.parse_args()
     
-    if not args.project and not args.draft:
-        print("Error: Either --project or --draft must be specified.", file=sys.stderr)
-        sys.exit(1)
     if args.project and args.draft:
         print("Error: Cannot specify both --project and --draft simultaneously. Choose one target.", file=sys.stderr)
         sys.exit(1)
+
+    # First-time user / natural prompt flow: if neither is passed, auto-default to a new Draft!
+    if not args.project and not args.draft:
+        raw_words = re.findall(r'[a-zA-Z0-9]+', args.task.lower())
+        meaningful = [w for w in raw_words if w not in ('create', 'build', 'make', 'add', 'a', 'an', 'the', 'with', 'and', 'for', 'in', 'to', 'of')]
+        slug = '_'.join(meaningful[:3]) if meaningful else ('_'.join(raw_words[:3]) or 'canvas')
+        args.draft = slug
 
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     sandboxes_root = os.path.join(repo_root, 'sandboxes')
@@ -257,6 +264,11 @@ Examples:
     
     # Print final report
     print(format_report_text(summary))
+
+    if is_draft:
+        draft_id = os.path.basename(project_root)
+        print(f"  💡 To continue this draft thread, run:")
+        print(f"     python main.py --draft {draft_id} --task \"<your next prompt>\"\n")
     
     # Exit code: 0 for success, 1 for failure
     sys.exit(0 if summary.get('status') == 'success' else 1)

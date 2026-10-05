@@ -15,6 +15,7 @@ from typing import Callable, Any
 
 # Event type constants
 RUN_STARTED = 'run.started'
+PLAN_CREATED = 'plan.created'
 STEP_PROGRESS = 'step.progress'
 TOOL_CALL = 'tool.call'
 TOOL_RESULT = 'tool.result'

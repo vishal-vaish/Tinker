@@ -13,8 +13,8 @@ import time
 from datetime import datetime
 from pathlib import Path
 from agent.events import (
-    Event, RUN_STARTED, STEP_PROGRESS, TOOL_CALL, TOOL_RESULT,
-    APPROVAL_REQUEST, RUN_FINISHED
+    Event, RUN_STARTED, PLAN_CREATED, STEP_PROGRESS, TOOL_CALL, TOOL_RESULT,
+    APPROVAL_REQUEST, RUN_FINISHED, SPEECH_SUMMARY
 )
 
 class RunTracer:
@@ -68,6 +68,11 @@ class RunTracer:
             stack = p.get('stack', 'unknown')
             target = p.get('project_root', '')
             line = f"[{timestr}] 🚀 RUN STARTED\n  Target: {target}\n  Stack:  {stack}\n  Task:   \"{task}\"\n"
+        elif event.type == PLAN_CREATED:
+            goal = p.get('goal', '')
+            checklist = p.get('checklist', [])
+            cl_str = '\n'.join(f"    [ ] {item}" for item in checklist)
+            line = f"[{timestr}] 🧠 PLAN SYNTHESIZED\n  Goal: {goal}\n  Checklist:\n{cl_str}\n"
         elif event.type == STEP_PROGRESS:
             desc = p.get('description', '')
             step_num = event.step or p.get('step', '?')
@@ -75,9 +80,28 @@ class RunTracer:
         elif event.type == TOOL_CALL:
             tool = p.get('tool', 'tool')
             args = p.get('arguments', {})
+            human_desc = p.get('human_desc')
+            if not human_desc:
+                path = args.get('path', '')
+                clean_path = os.path.basename(path) if path else ""
+                if tool == 'list_files':
+                    human_desc = "Explored project files"
+                elif tool == 'read_file':
+                    human_desc = f"Explored {clean_path}" if clean_path else "Explored files"
+                elif tool == 'create_file':
+                    human_desc = f"Created {clean_path}" if clean_path else "Created file"
+                elif tool == 'edit_file':
+                    human_desc = f"Edited {clean_path}" if clean_path else "Edited file"
+                elif tool == 'run_tests':
+                    human_desc = "Verified changes"
+                elif tool == 'finish':
+                    human_desc = "Completed task"
+                else:
+                    human_desc = f"Executed {tool}"
+
             args_str = ', '.join(f"{k}={repr(v)[:40]}" for k, v in args.items())
             step_num = event.step or p.get('step', '?')
-            line = f"[{timestr}] 🔧 STEP {step_num}: TOOL CALL -> {tool}({args_str})"
+            line = f"[{timestr}] {human_desc} [{tool}({args_str})]"
         elif event.type == TOOL_RESULT:
             tool = p.get('tool', 'tool')
             success = p.get('success', True)

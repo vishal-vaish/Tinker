@@ -39,3 +39,18 @@ class PlanManager:
         current = self.read()
         update = f"\n## Step {step}\n{description}\n"
         self.write(current + update)
+
+    def mark_item_done(self, pattern: str):
+        """Check off matching '- [ ] ...' checklist items in plan.md to reflect live progress."""
+        current = self.read()
+        if not current or current.startswith('('):
+            return
+        lines = current.split('\n')
+        modified = False
+        for i, line in enumerate(lines):
+            if line.strip().startswith('- [ ]') and pattern.lower() in line.lower():
+                lines[i] = line.replace('- [ ]', '- [x]', 1)
+                modified = True
+                break
+        if modified:
+            self.write('\n'.join(lines))

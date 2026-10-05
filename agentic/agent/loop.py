@@ -25,7 +25,7 @@ from collections import Counter
 from agent.config import AgentConfig
 from agent.models import OllamaClient, ModelResponse, ToolCall
 from agent.events import (
-    EventEmitter, RUN_STARTED, STEP_PROGRESS, TOOL_CALL,
+    EventEmitter, RUN_STARTED, PLAN_CREATED, STEP_PROGRESS, TOOL_CALL,
     TOOL_RESULT, RUN_FINISHED, SPEECH_SUMMARY, APPROVAL_REQUEST,
 )
 from agent.tools.registry import ToolRegistry
@@ -40,34 +40,42 @@ from agent.plan import PlanManager
 from agent.tracing import RunTracer
 from agent.report import build_report, format_report_text, build_markdown_report
 from agent.stacks import validate_and_resolve_stack, ResolvedProjectStack, StackValidationError
+from agent.scaffolder import ensure_stack_scaffold
+from agent.analyzer import analyze_task_intent
 
 
-SYSTEM_PROMPT = """You are an expert coding agent. Your goal is to solve a coding task by exploring code, editing files, running tests, fixing bugs, and verifying your work.
+SYSTEM_PROMPT = """You are Tinker, an elite autonomous software engineering agent.
+Your mission is to understand user requirements deeply, plan thoroughly, and implement complete, production-grade solutions across all relevant files.
 
 AVAILABLE TOOLS:
 - list_files(path="."): List files and folders in a directory
-- read_file(path, start_line=1, end_line=0): Read file content with line ranges
+- read_file(path, start_line=1, end_line=0): Read file content with line numbers
 - search_text(pattern, path="."): Search for text/regex across project files
-- edit_file(path, old_string, new_string): Replace a UNIQUE string in a file. Must be unique. Include enough context lines to make it unique.
-- create_file(path, content): Create a new file (fails if it exists)
+- edit_file(path, old_string, new_string): Replace a UNIQUE string in a file. Must be exact and unique.
+- create_file(path, content): Create a new file (fails if file already exists)
 - run_command(command): Run an allowlisted shell command
-- run_tests(command=""): Run tests and see only failing tests and error messages
-- finish(summary): Declare completion when all tests pass
+- run_tests(command=""): Run tests / build checks
+- finish(summary): Declare completion ONLY after all checklist items are verified and present in code
 
-WORKFLOW:
-1. EXPLORE: Run tests first (`run_tests`) to see what fails. Read the relevant source files.
-2. PLAN: Form a clear hypothesis about what's broken and how to fix it.
-3. ACT: Use `edit_file` to fix the bug. Provide exact, unique old_string with surrounding lines.
-4. VERIFY: Run `run_tests` to check if your fix worked.
-5. RETRY: If tests still fail, read the error carefully, diagnose, and try a different approach.
-6. FINISH: Only call `finish` when `run_tests` reports TESTS PASSED.
+CORE ENGINEERING PRINCIPLES:
+1. CHECK & PLAN FIRST:
+   - Before modifying any file, inspect existing files using `read_file` to understand the current structure, container hierarchy, element IDs, and styles.
+   - Never guess where an element belongs—read the file first!
 
-RULES:
-- Always run tests before claiming success. Never guess.
-- Do NOT edit test files unless explicitly told to. Test files are read-only.
-- When using `edit_file`, make sure `old_string` appears EXACTLY ONCE in the file.
-- Be concise. Focus on fixing the bug.
-- Respond with tool calls to take action.
+2. STRICT MULTI-LAYER UI COMPLETENESS:
+   - When building, adding, or modifying any visual feature (inputs, checkboxes, buttons, remember-me, toggles, headers, cards):
+     * MARKUP LAYER: You MUST update the HTML/TSX file (`index.html` or `app/page.tsx`) to insert the visual element into the DOM. Never edit only a script while omitting the HTML markup!
+     * STYLING LAYER: You MUST update CSS / Tailwind classes (`style.css` or Tailwind utilities) to ensure clean alignment, spacing, typography, and responsive layout.
+     * LOGIC LAYER: Wire up event listeners, form bindings, and state in `script.js` or React component hooks.
+   - If a user asks for "remember me", the `<input type="checkbox" id="rememberMe">` and `<label for="rememberMe">Remember me</label>` MUST be added to the HTML markup and styled in CSS.
+
+3. VERIFICATION BEFORE COMPLETION:
+   - Never call `finish` until you have verified that every requested element physically exists in the file on disk.
+   - Always run tests/build (`run_tests`) to confirm clean execution.
+
+4. EXACT EDITS:
+   - When using `edit_file`, ensure `old_string` matches the file content EXACTLY and appears uniquely.
+   - Respond with tool calls to take action.
 """
 
 
@@ -203,9 +211,16 @@ class AgentLoop:
             keep_recent=4,
         )
 
+        # Step 0b: Stack-Aware Baseline Scaffolding (if fresh)
+        scaffolded = ensure_stack_scaffold(project_root, resolved_stack.name, task)
+
+        # Step 0c: Synthesize Detailed Specification & Implementation Checklist via LLM Architect
+        analysis = analyze_task_intent(task, project_root, resolved_stack.name, is_draft=is_draft, model=self.model)
+        plan_markdown = analysis.format_plan_markdown()
+
         # Setup scratchpad plan
         plan_mgr = PlanManager(tracer.plan_path)
-        plan_mgr.write(f"# Plan for: {task}\n\n1. Run tests/build to see current state\n2. Locate the issue\n3. Apply fix\n4. Verify tests/build pass\n")
+        plan_mgr.write(plan_markdown)
 
         # Emit run started with stack information
         self.emitter.emit(RUN_STARTED, {
@@ -222,6 +237,19 @@ class AgentLoop:
             },
         })
 
+        # Emit synthesized plan for live UI streaming
+        self.emitter.emit(PLAN_CREATED, {
+            'goal': analysis.goal,
+            'task_type': analysis.task_type,
+            'checklist': analysis.checklist,
+            'ui_elements': analysis.ui_elements_required,
+            'domain_state': analysis.domain_state,
+            'files_to_touch': analysis.files_to_touch,
+            'verification_criteria': analysis.verification_criteria,
+            'markdown': plan_markdown,
+            'stack': resolved_stack.name,
+        })
+
         # --- Baseline: Run tests/build before any changes ---
         initial_test_result = _run_tests(command=resolved_stack.default_verify_command, project_root=project_root)
         with open(os.path.join(tracer.run_dir, 'artifacts', 'tests_before.txt'), 'w', encoding='utf-8') as f:
@@ -236,14 +264,20 @@ class AgentLoop:
         if resolved_stack.prompt_guidance:
             active_system_prompt += f"\n\nFRAMEWORK & STACK GUIDANCE:\n{resolved_stack.prompt_guidance}"
 
-        # State tracking
+        # State tracking with explicit specification & checklist injected
         full_message_history: list[dict] = [
             {'role': 'system', 'content': active_system_prompt},
             {'role': 'user', 'content': (
                 f"Task: {task}\n\n"
+                f"Target Stack: {resolved_stack.name.upper()} ({resolved_stack.active_stack.display_name})\n"
                 f"Project directory: {project_root}\n\n"
-                f"Initial test run:\n{initial_test_result}\n\n"
-                f"Start by investigating the failure and forming a plan."
+                f"--- SPECIFICATION & IMPLEMENTATION CHECKLIST ---\n"
+                f"{plan_markdown}\n\n"
+                f"CRITICAL EXECUTION DIRECTIVES:\n"
+                f"1. Follow the checklist strictly step-by-step.\n"
+                f"2. Inspect existing files (`index.html` or `app/page.tsx`) using `read_file` to see the current DOM before making changes.\n"
+                f"3. When any visual UI element is requested (like inputs, checkboxes, buttons, remember me, styling), you MUST update the visual markup (HTML/TSX) so the element actually exists on the screen, AND update the styles (CSS/Tailwind).\n"
+                f"4. Never finish until you verify every checklist item exists on disk."
             )},
         ]
 
@@ -287,7 +321,7 @@ class AgentLoop:
                 # ── Build context-managed messages ────────────────────────
                 current_plan = plan_mgr.read()
                 messages, context_info = context_mgr.build_messages(
-                    system_prompt=SYSTEM_PROMPT,
+                    system_prompt=active_system_prompt,
                     task=task,
                     plan=current_plan,
                     full_message_history=full_message_history,
@@ -296,7 +330,7 @@ class AgentLoop:
                 # Emit progress
                 self.emitter.emit(STEP_PROGRESS, {
                     'step': step_num,
-                    'description': f'Step {step_num}/{self.config.max_steps} — thinking...',
+                    'description': 'Thinking...',
                     'elapsed': round(elapsed, 1),
                     'tokens_used': context_info.get('total_tokens', 0),
                     'role': current_role,
@@ -358,6 +392,24 @@ class AgentLoop:
                         context_mgr.add_step(step_record)
                         continue
 
+                    # Helper for human-readable stage logs
+                    path_arg = tc.arguments.get('path', '')
+                    clean_path = os.path.basename(path_arg) if path_arg else ""
+                    if tc.name == 'list_files':
+                        human_desc = "Explored project files"
+                    elif tc.name == 'read_file':
+                        human_desc = f"Explored {clean_path}" if clean_path else "Explored files"
+                    elif tc.name == 'create_file':
+                        human_desc = f"Created {clean_path}" if clean_path else "Created file"
+                    elif tc.name == 'edit_file':
+                        human_desc = f"Edited {clean_path}" if clean_path else "Edited file"
+                    elif tc.name == 'run_tests':
+                        human_desc = "Verified changes"
+                    elif tc.name == 'finish':
+                        human_desc = "Completed task"
+                    else:
+                        human_desc = f"Executed {tc.name}"
+
                     # Handle finish tool
                     if tc.name == 'finish':
                         tool_counts['finish'] += 1
@@ -380,26 +432,28 @@ class AgentLoop:
                             status = 'success'
                             stop_reason = 'finish_called'
 
-                        self.emitter.emit(TOOL_CALL, {'tool': tc.name, 'arguments': tc.arguments}, step=step_num)
-                        self.emitter.emit(TOOL_RESULT, {'tool': tc.name, 'result': summary_text}, step=step_num)
+                        self.emitter.emit(TOOL_CALL, {'tool': tc.name, 'arguments': tc.arguments, 'human_desc': human_desc, 'path': path_arg}, step=step_num)
+                        self.emitter.emit(TOOL_RESULT, {'tool': tc.name, 'result': summary_text, 'human_desc': human_desc, 'path': path_arg}, step=step_num)
                         self.emitter.emit(SPEECH_SUMMARY, {'text': summary_text}, step=step_num)
 
                         step_record['tool'] = tc.name
                         step_record['tool_args'] = tc.arguments
                         step_record['tool_result'] = summary_text
+                        step_record['human_desc'] = human_desc
                         steps.append(step_record)
                         break
 
                     # Execute regular tool
-                    self.emitter.emit(TOOL_CALL, {'tool': tc.name, 'arguments': tc.arguments}, step=step_num)
+                    self.emitter.emit(TOOL_CALL, {'tool': tc.name, 'arguments': tc.arguments, 'human_desc': human_desc, 'path': path_arg}, step=step_num)
                     result = tools.execute(tc.name, tc.arguments)
                     tool_counts[tc.name] += 1
 
-                    # Track file changes for no-progress
+                    # Track file changes for no-progress & update live plan checklist
                     if tc.name in ('edit_file', 'create_file') and result['success']:
                         consecutive_no_file_changes = 0
                         gate.record_file_modified(tc.arguments.get('path', ''))
                         plan_mgr.update_step(step_num, f"Edited {tc.arguments.get('path')}")
+                        plan_mgr.mark_item_done(tc.arguments.get('path', ''))
                     else:
                         consecutive_no_file_changes += 1
 
@@ -409,25 +463,54 @@ class AgentLoop:
                         'tool': tc.name,
                         'success': result['success'],
                         'result': str(result_text)[:300],
+                        'human_desc': human_desc,
+                        'path': path_arg,
                     }, step=step_num)
 
                     # Track for no-progress
                     args_hash = json.dumps(tc.arguments, sort_keys=True)
                     last_tool_calls.append((tc.name, args_hash))
 
-                    # Track test failures for retry limit
+                    # Track test failures for intelligent repair & Architect re-planning
                     if tc.name == 'run_tests':
-                        if 'TESTS FAILED' in str(result_text):
+                        if 'TESTS FAILED' in str(result_text) or 'ERROR:' in str(result_text):
                             failure_key = str(result_text)[:200]
                             if failure_key == last_failure_key:
                                 same_failure_retries += 1
+                                result_text += "\n\n[REPAIR DIRECTIVE] You repeated the same failure twice. Carefully read the error traceback above. Inspect the failing file using read_file to check exact line context, and fix the root cause before testing again."
                                 if same_failure_retries >= self.config.max_retries_same_failure:
+                                    # Trigger Architect re-planning to overcome blockage
+                                    try:
+                                        replan = analyze_task_intent(
+                                            f"Fix build/test failure: {failure_key}. Original task: {task}",
+                                            project_root,
+                                            resolved_stack.name,
+                                            is_draft=is_draft,
+                                            model=self.model
+                                        )
+                                        new_plan_md = replan.format_plan_markdown()
+                                        plan_mgr.write(new_plan_md)
+                                        self.emitter.emit(PLAN_CREATED, {
+                                            'goal': f"[Re-plan] {replan.goal}",
+                                            'task_type': 'fix',
+                                            'checklist': replan.checklist,
+                                            'ui_elements': replan.ui_elements_required,
+                                            'domain_state': replan.domain_state,
+                                            'files_to_touch': replan.files_to_touch,
+                                            'verification_criteria': replan.verification_criteria,
+                                            'markdown': new_plan_md,
+                                            'stack': resolved_stack.name,
+                                        }, step=step_num)
+                                        result_text += "\n\n[ARCHITECT PLAN REVISED] A revised strategy has been synthesized into the plan. Proceed with the new checklist."
+                                    except Exception:
+                                        pass
+
                                     if current_role == 'main':
                                         current_role = 'fallback'
                                         same_failure_retries = 0
                                         self.emitter.emit(STEP_PROGRESS, {
                                             'step': step_num,
-                                            'description': f'Same failure {self.config.max_retries_same_failure} times — switching to fallback model',
+                                            'description': f'Same failure {self.config.max_retries_same_failure} times — switching to fallback model with revised plan',
                                         }, step=step_num)
                                     else:
                                         stop_reason = f'retry_limit_reached ({self.config.max_retries_same_failure} retries on both models)'
